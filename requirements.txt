@@ -1,0 +1,15 @@
+python-dotenv
+matplotlib
+mpmath
+networkx
+nltk
+numpy
+openai
+pandas
+python-dotenv
+tqdm
+xgboost
+scikit-learn
+datasets
+rank-bm25
+torch
