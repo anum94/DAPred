@@ -1,0 +1,5 @@
+dataset,use_togetherai,use_openai,device_map,load_in_4bit,load_in_8bit,eval_metrics,method,exec_kwargs,model_hf_key,batch_size,max_new_tokens,few_shot_examples,max_length,min_input_size,samples,preview,dataset_name,run_id,model,prompt,bert_precision,bert_recall,bert_f1,rouge1,rouge2,rougeL,rougeLsum,vocab_overlap,bart_f_score,bart_precision,bart_recall,Relevance,Coherence,Consistency,Fluency,fs_wiki,fs_grounded,fs_grounded_wiki
+wispermed,False,True,auto,False,False,"['bertscore', 'rogue', 'vocab_overlap', 'bartscore', 'llm_eval', 'fact_score']",,{},gpt-4o-mini,1,256,False,8192,0,max,False,arxiv,/content/drive/MyDrive/projects/domain-adaptation-summarization/domain-adaptation/results/summarization_csv/MODEL_gpt-4o-mini_0-SHOT_arxiv_2024-09-25_06-20-01/MODEL_gpt-4o-mini_0-SHOT_arxiv_2024-09-25_06-20-01.csv,gpt-4o-mini,"Proceed to summarize the following text.
+ TEXT : {} 
+ Summary: 
+",0.8417627966403961,0.8345255070924759,0.8379714214801788,0.3741971577010156,0.10803311968635261,0.1998240367037385,0.2725491364653452,23.438796837063975,-4.280717962980271,-3.7505436158180236,-4.810892310142517,4.69,4.46,4.74,2.99,1.0,1.0,1.0

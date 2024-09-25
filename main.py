@@ -21,7 +21,7 @@ if __name__ == '__main__':
 
     parser.add_argument('--template_path',
                         type=str,
-                        default="template.xlsx")
+                        default="overall_summary.csv")
 
     args = parser.parse_args()
     diamonds = construct_training_corpus(domains=args.domains, da_type=args.da_type,

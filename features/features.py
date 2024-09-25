@@ -21,17 +21,26 @@ from typing import List
 import pandas as pd
 from datetime import datetime
 import random
+import logging
 import itertools
 # Definitions
 
 
 
-def get_task_spec_metrics(domain:str, task:str):
+def get_task_spec_metrics(domain:str, task:str, task_spec_metrics):
+    task_spec_metrics = task_spec_metrics.drop(["dataset_name"], axis = 1)
     if task == "classification":
         return {"accuracy": random.uniform(0, 1)}
     elif task == "summarization":
-        return {"rouge": random.uniform(0, 1),
-                "bertscore": random.uniform(0, 1)}
+        if len(task_spec_metrics) > 0:
+            score_dict = task_spec_metrics.iloc[0].to_dict()
+        else: #return random values
+            logging.warning(f"Added random value for task: {task}, domain:{domain} \n")
+            score_dict = dict()
+            for score in task_spec_metrics.columns:
+                score_dict[score] = random.uniform(0, 1)
+
+        return score_dict
     else:
         return {}
 
@@ -69,7 +78,7 @@ def get_domain_similarity_metrics(source:str, target:str, num_samples = 10):
 
 def weighted_average(nums, weights):
   return sum(x * y for x, y in zip(nums, weights)) / sum(weights)
-def get_features( da:str,source:str, target:str, task:str)-> (List,List):
+def get_features( da:str,source:str, target:str, task:str, task_scores)-> (List,List):
     features = []
     feature_names = ['da-type', 'source', 'target',]
     features.append(da)
@@ -84,15 +93,15 @@ def get_features( da:str,source:str, target:str, task:str)-> (List,List):
     features += list(domain_similarity_features.values())
     feature_names += list(domain_similarity_features.keys())
 
-    task_specific_feature = get_task_spec_metrics(source, task)
+    source_task_scores = task_scores.loc[task_scores['dataset_name'] == source]
+    task_specific_feature = get_task_spec_metrics(source, task, source_task_scores)
     features += list(task_specific_feature.values())
     feature_names += [f'source_{key}' for key in list(task_specific_feature.keys())]
     feature_weight = [1/len(task_specific_feature.values())] * len(task_specific_feature.values()) #equal weight to all features
     weighted_y_source = weighted_average(list(task_specific_feature.values()), feature_weight)
 
-
-
-    task_specific_feature = get_task_spec_metrics(target, task)
+    target_task_scores = task_scores.loc[task_scores['dataset_name'] == target]
+    task_specific_feature = get_task_spec_metrics(target, task, target_task_scores)
     features += list(task_specific_feature.values())
     feature_names += [f'target_{key}' for key in list(task_specific_feature.keys())]
     feature_weight = [1 / len(task_specific_feature.values())] * len(task_specific_feature.values())  # equal weight to all features
@@ -107,11 +116,15 @@ def get_features( da:str,source:str, target:str, task:str)-> (List,List):
 
     return features, feature_names
 
-def get_template(path:str, domains) -> pd.DataFrame:
+def get_template(scores_path:str, domains, ) -> pd.DataFrame:
 
+    task_scores = pd.read_csv(scores_path)
+    ds_list = list(task_scores["dataset_name"])
+    task_scores = task_scores.drop(columns=task_scores.columns[:21])
+    task_scores["dataset_name"] = ds_list
     da_type = ["in-domain-adapt", "single-domain-adapt"] #, "multi-domain-adapt"]
     task = 'summarization'
-    feature_names = ['dummy_feature_name'] * 17
+    feature_names = ['dummy_feature_name'] * 18
     df = pd.DataFrame()
 
     for da in da_type:
@@ -119,7 +132,7 @@ def get_template(path:str, domains) -> pd.DataFrame:
         features.append(da)
         if da == "in-domain-adapt":
             for domain in domains:
-                features, feature_names = get_features(da,domain,domain, task)
+                features, feature_names = get_features(da,domain,domain, task, task_scores)
                 if df.columns.empty:
                     df = pd.DataFrame(columns=feature_names)
                 df.loc[len(df)] = features
@@ -129,7 +142,7 @@ def get_template(path:str, domains) -> pd.DataFrame:
                 domains_copy = domains.copy()
                 domains_copy.remove(source)
                 for target in domains_copy:
-                    features, feature_names = get_features(da, source, target, task)
+                    features, feature_names = get_features(da, source, target, task, task_scores)
                     if df.columns.empty:
                         df = pd.DataFrame(columns=feature_names)
                     df.loc[len(df)] = features
