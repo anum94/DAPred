@@ -1,8 +1,10 @@
 import argparse
 import numpy as np
 import warnings
+
+import pandas as pd
 from sklearn.model_selection import train_test_split
-#import xgboost as xgb
+import xgboost as xgb
 from sklearn.metrics import mean_squared_error
 from dotenv import load_dotenv
 warnings.filterwarnings("ignore")
@@ -24,10 +26,12 @@ if __name__ == '__main__':
                         default="overall_summary.xlsx")
 
     args = parser.parse_args()
-    diamonds = construct_training_corpus(domains=args.domains, da_type=args.da_type,
-                              template_path=args.template_path)
-    print (diamonds.describe())
-    diamonds.to_excel("Diamonds.xlsx")
+    #diamonds = construct_training_corpus(domains=args.domains, da_type=args.da_type,
+    #                          template_path=args.template_path)
+    #print (diamonds.describe())
+    #diamonds.to_excel("Diamonds.xlsx")
+    diamonds = pd.read_excel("Diamonds.xlsx")
+    print(diamonds.describe())
     diamonds.drop('y_weighted_target',axis=1)
     diamonds.drop('target', axis=1)
     diamonds.drop('source', axis=1)
@@ -46,7 +50,7 @@ if __name__ == '__main__':
 
     # Split the data
     X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=1)
-    '''
+
     # Create regression matrices
     dtrain_reg = xgb.DMatrix(X_train, y_train, enable_categorical=True)
     dtest_reg = xgb.DMatrix(X_test, y_test, enable_categorical=True)
@@ -70,5 +74,5 @@ if __name__ == '__main__':
     preds = model.predict(dtest_reg)
     rmse = mean_squared_error(y_test, preds, squared=False)
     print(f"RMSE of the base model: {rmse:.3f}")
-    '''
+
 
