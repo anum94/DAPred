@@ -4,9 +4,10 @@ from ds.hfdataset import HFDataset
 class Pubmed(HFDataset):
     ds_name = "pubmed"
     dataset_kwargs = {
-        "ds_name": "ishwor-subedi621/slice1000_pubmed",
-        "ds_subset": "default",
-        "col_map": {"text": "text", "summary": "summary"},
+        "ds_name": "ccdv/pubmed-summarization",
+        "ds_subset": "document",
+        "col_map": {"article": "text", "abstract": "summary"},
+        "remove_columns": [],
     }
 
     def __init__(

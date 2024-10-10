@@ -7,6 +7,7 @@ class LaySum(HFDataset):
         "ds_name": "ishwor-subedi621/slice1000_wispermed",
         "ds_subset": "default",
         "col_map": {"article": "text", "summary": "summary"},
+        "remove_columns": ["section_headings", "keywords", "year", "title"],
     }
 
     def __init__(

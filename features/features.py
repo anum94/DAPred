@@ -48,7 +48,7 @@ def get_domain_specific_metrics(domain:str):
     return {"learning_difficult": random.uniform(0, 1)}
 
 
-def get_domain_similarity_metrics(source:str, target:str, num_samples = 10):
+def get_domain_similarity_metrics(source:str, target:str, num_samples = 100):
 
     s_dataset = load_dataset(
             dataset=source,
@@ -118,19 +118,20 @@ def get_features( da:str,source:str, target:str, task:str, task_scores)-> (List,
 
 def get_template(scores_path:str, domains, ) -> pd.DataFrame:
 
-    task_scores = pd.read_csv(scores_path)
+    task_scores = pd.read_excel(scores_path,)
     ds_list = list(task_scores["dataset_name"])
-    task_scores = task_scores.drop(columns=task_scores.columns[:21])
+    task_scores = task_scores.drop(columns=task_scores.columns[:15])
     task_scores["dataset_name"] = ds_list
     da_type = ["in-domain-adapt", "single-domain-adapt"] #, "multi-domain-adapt"]
     task = 'summarization'
-    feature_names = ['dummy_feature_name'] * 18
+    feature_names = ['dummy_feature_name'] * (len(task_scores.columns) - 1)
     df = pd.DataFrame()
 
     for da in da_type:
         features = []
         features.append(da)
         if da == "in-domain-adapt":
+            # todo: for in-domain, take train split for source and test split for target
             for domain in domains:
                 features, feature_names = get_features(da,domain,domain, task, task_scores)
                 if df.columns.empty:

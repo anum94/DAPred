@@ -3,9 +3,11 @@ from typing import Mapping, Sequence, Union
 
 from ds.arxiv import Arxiv
 from ds.bigpatent import BigPatent
+from ds.cnndm import CNNDailyMail
 from ds.govreport import GovReport
 from ds.hfdataset import HFDataset
 from ds.pubmed import Pubmed
+from ds.samsum import SAMSum
 from ds.wispermed import LaySum
 
 translate_dataset_name = {
@@ -14,6 +16,8 @@ translate_dataset_name = {
     "bigpatent": BigPatent,
     "pubmed": Pubmed,
     "wispermed": LaySum,
+    "cnndm": CNNDailyMail,
+    "samsum": SAMSum,
 }
 
 

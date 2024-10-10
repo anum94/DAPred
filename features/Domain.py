@@ -13,7 +13,6 @@ from sklearn.feature_extraction.text import (
 )
 from rank_bm25 import BM25Okapi
 from nltk.stem import WordNetLemmatizer
-from datasets import load_dataset
 
 
 # Definitions
@@ -76,7 +75,9 @@ class Domain:
         for i in tqdm(range(len(data))):
             document = self.process_text(data[i])
             domain_words.append(document)
-            article = data[i][:1000] #@todo: for fast computation, just take the frist 1000 characters for now
+            article = data[i]
+            if len(article.split()) > 4000:
+                article =  ' '.join(article[:4000])
             if self.client:
                 sentence_embeddings.append(self.compute_sentence_embeddings(article) )
         return domain_words, sentence_embeddings

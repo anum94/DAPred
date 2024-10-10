@@ -1,13 +1,13 @@
 from ds.hfdataset import HFDataset
 
 
-class GovReport(HFDataset):
-    ds_name = "govreport"
+class CNNDailyMail(HFDataset):
+    ds_name = "cnndm"
     dataset_kwargs = {
-        "ds_name": "ccdv/govreport-summarization",
-        "ds_subset": "document",
-        "col_map": {"report": "text"},
-        "remove_columns": [],
+        "ds_name": "abisee/cnn_dailymail",
+        "ds_subset": "1.0.0",  # other options: "2.0.0" and  "3.0.0"
+        "col_map": {"article": "text", "highlights": "summary"},
+        "remove_columns": ["id"],
     }
 
     def __init__(

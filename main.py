@@ -17,16 +17,17 @@ if __name__ == '__main__':
     parser.add_argument('--domain',
                         dest="domains",
                         action='append',
-                        default=['arxiv', 'pubmed', 'govreport', 'wispermed'])
+                        default=['arxiv', 'pubmed', 'govreport', 'wispermed', 'cnndm', 'samsum', 'bigpatent'])
 
     parser.add_argument('--template_path',
                         type=str,
-                        default="overall_summary.csv")
+                        default="overall_summary.xlsx")
 
     args = parser.parse_args()
     diamonds = construct_training_corpus(domains=args.domains, da_type=args.da_type,
                               template_path=args.template_path)
     print (diamonds.describe())
+    diamonds.to_excel("Diamonds.xlsx")
     diamonds.drop('y_weighted_target',axis=1)
     diamonds.drop('target', axis=1)
     diamonds.drop('source', axis=1)

@@ -1,13 +1,13 @@
 from ds.hfdataset import HFDataset
 
 
-class GovReport(HFDataset):
-    ds_name = "govreport"
+class SAMSum(HFDataset):
+    ds_name = "samsum"
     dataset_kwargs = {
-        "ds_name": "ccdv/govreport-summarization",
-        "ds_subset": "document",
-        "col_map": {"report": "text"},
-        "remove_columns": [],
+        "ds_name": "Samsung/samsum",
+        "ds_subset": "samsum",
+        "col_map": {"dialogue": "text", "summary": "summary"},
+        "remove_columns": ["id"],
     }
 
     def __init__(

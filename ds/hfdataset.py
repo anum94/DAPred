@@ -13,6 +13,7 @@ class HFDataset:
         ds_name: str,
         ds_subset: str,
         col_map: dict,
+        remove_columns: list,
         preview: bool,
         preview_size: int = 4,
         min_input_size: int = 0,
@@ -25,18 +26,25 @@ class HFDataset:
         if load_csv:
             data = load_dataset("csv", data_files=data_files)
         else:
-            data = load_dataset(ds_name, ds_subset)
+            data = load_dataset(ds_name, ds_subset , trust_remote_code=True)
 
         if preview:
             for k in data.keys():
                 data[k] = data[k].select(range(preview_size))
 
         elif samples != "max":
-            data["train"] = data["train"].select(
-                range(min(len(data["train"]), samples))
-            )
+            if 'bigpatent' not in ds_name:
+                data["train"] = data["train"].select(
+                    range(min(len(data["train"]), samples))
+                )
+            else:
+                data["train"] = data["test"].select(
+                    range(min(len(data["test"]), samples))
+                )
 
-        self.ds = self.preprocess(data, col_map, min_input_size)
+        self.ds = self.preprocess(
+            data, col_map, min_input_size, remove_columns=remove_columns
+        )
 
     def get_split(self, key: str) -> Dataset:
         return self.ds[key]
@@ -46,6 +54,7 @@ class HFDataset:
         data: DatasetDict,
         col_map: dict,
         min_input_size: int,
+        remove_columns: list,
     ) -> DatasetDict:
         # conditions for admitting data into the training:
         # 1) Text (x) is twice as long as summary (y) and less than 1000 times longer.
@@ -63,6 +72,7 @@ class HFDataset:
             z = zip(batch["text"], batch["summary"])
             # apply the logical inverse of `mask` to obtain admissible documents.
             valid = list(filter(lambda x: mask(x[0], x[1]), z))
+            # print(valid)
             res["text"] = [valid[idx][0] for idx in range(len(valid))]
             res["summary"] = [valid[idx][1] for idx in range(len(valid))]
             return res
@@ -70,7 +80,16 @@ class HFDataset:
         logging.info("Preprocessing dataset")
         data = data.rename_columns(col_map)
         # save_test = data["test"]
-        data = data.map(fn, batched=True)
+        print(data)
+        # print(len(data["text"]), len(data["summary"]))
+        if remove_columns == []:
+            data = data.map(
+                fn,
+                batched=True,
+            )
+        else:
+            data = data.map(fn, batched=True, remove_columns=remove_columns)
+
         # data["test"] = save_test
         data.set_format("torch")
         return data
@@ -80,8 +99,12 @@ class HFDataset:
         data: DatasetDict,
         col_map: dict,
         min_input_size: int,
+        remove_columns: list,
     ) -> DatasetDict:
         # subclasses can implement custom behaviour by defining the preprocess fn
         return self.scrolls_preprocess(
-            data=data, col_map=col_map, min_input_size=min_input_size
+            data=data,
+            col_map=col_map,
+            min_input_size=min_input_size,
+            remove_columns=remove_columns,
         )

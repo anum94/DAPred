@@ -7,6 +7,7 @@ class Arxiv(HFDataset):
         "ds_name": "ccdv/arxiv-summarization",
         "ds_subset": "document",
         "col_map": {"article": "text", "abstract": "summary"},
+        "remove_columns": [],
     }
 
     def __init__(
