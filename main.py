@@ -35,6 +35,7 @@ if __name__ == '__main__':
     diamonds.drop('y_weighted_target',axis=1)
     diamonds.drop('target', axis=1)
     diamonds.drop('source', axis=1)
+    diamonds.drop('learning_difficult', axis=1)
 
 
 
