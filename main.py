@@ -38,6 +38,9 @@ if __name__ == '__main__':
     diamonds.drop('source', axis=1)
     diamonds.drop('learning_difficult', axis=1)
     print(diamonds.describe())
+    diamonds = diamonds.sample(frac = 1)
+
+
 
 
 
@@ -76,7 +79,7 @@ if __name__ == '__main__':
 
     preds = model.predict(dtest_reg)
     rmse = mean_squared_error(y_test, preds, squared=True)
-    print(f"RMSE of the base model: {rmse:.3f}")
+    #print(f"RMSE of the base model: {rmse:.3f}")
 
     # Step 5: Evaluate the model's accuracy on the test set
     mse = mean_squared_error(y_test, preds)
