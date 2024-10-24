@@ -3,9 +3,11 @@ from typing import Mapping, Sequence, Union
 
 from ds.arxiv import Arxiv
 from ds.bigpatent import BigPatent
+from ds.billsum import BillSum
 from ds.cnndm import CNNDailyMail
 from ds.govreport import GovReport
 from ds.hfdataset import HFDataset
+from ds.legalsum import LegalSum
 from ds.pubmed import Pubmed
 from ds.samsum import SAMSum
 from ds.wispermed import LaySum
@@ -18,6 +20,8 @@ translate_dataset_name = {
     "wispermed": LaySum,
     "cnndm": CNNDailyMail,
     "samsum": SAMSum,
+    "billsum": BillSum,
+    "legalsum": LegalSum,
 }
 
 
@@ -39,6 +43,6 @@ def load_dataset(
         preview=preview,
         samples=samples,
         min_input_size=min_input_size,
-        #load_csv=load_csv,
-        #data_files=data_files,
+        # load_csv=load_csv,
+        # data_files=data_files,
     )

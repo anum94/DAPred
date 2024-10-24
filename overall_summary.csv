@@ -1,0 +1,29 @@
+;lay_summarization;use_togetherai;use_openai;device_map;load_in_4bit;load_in_8bit;eval_metrics;model_hf_key;max_length;max_sample_size;preview;dataset_name;model;prompt;bert_f1;rouge1;rougeL;vocab_overlap;Relevance;Coherence;Consistency;Fluency
+0;FALSE;FALSE;TRUE;auto;FALSE;FALSE;['bertscore', 'rogue', 'vocab_overlap', 'llm_eval', 'fact_score'];gpt-4o-mini;8192;100;FALSE;arxiv;gpt-4o-mini;"Proceed to summarize the following text. 
+ TEXT : {} 
+ Summary: 
+";0.8379562324285508;0.3731898312872819;0.1987836929587282;23.49159841015843;4.06;4.02;4.25;3.0
+1;TRUE;FALSE;TRUE;auto;FALSE;FALSE;['bertscore', 'rogue', 'vocab_overlap', 'llm_eval'];gpt-4o-mini;4096;100;FALSE;wispermed;gpt-4o-mini;"Proceed to summarize the following text. 
+ TEXT : {} 
+ Summary: 
+";0.8599179780483246;0.4577820372492035;0.221190058564684;23.114144387850818;3.97;3.96;3.86;3.0
+2;FALSE;FALSE;TRUE;auto;FALSE;FALSE;['bertscore', 'rogue', 'vocab_overlap', 'llm_eval'];gpt-4o-mini;4096;100;FALSE;pubmed;gpt-4o-mini;"Proceed to summarize the following text. 
+ TEXT : {} 
+ Summary: 
+";0.8475039517879486;0.3731170071819887;0.2153843537083891;22.241955013539823;4.45;3.99;4.72;3.0
+3;FALSE;FALSE;TRUE;auto;FALSE;FALSE;['bertscore', 'rogue', 'vocab_overlap', 'llm_eval'];gpt-4o-mini;4096;100;FALSE;govreport;gpt-4o-mini;"Proceed to summarize the following text. 
+ TEXT : {} 
+ Summary: 
+";0.8611652547121048;0.3859102226065106;0.1992954114988434;26.459000425328902;3.86;3.75;3.64;3.0
+4;FALSE;FALSE;TRUE;auto;FALSE;FALSE;['bertscore', 'rogue', 'vocab_overlap', 'llm_eval'];gpt-4o-mini;4096;100;FALSE;samsum;gpt-4o-mini;"Proceed to summarize the following text. 
+ TEXT : {} 
+ Summary: 
+";0.8971316856145859;0.3769293793618067;0.3064238233106552;17.59068054848856;0.91;0.37;0.4;2.97
+5;FALSE;FALSE;TRUE;auto;FALSE;FALSE;['bertscore', 'rogue', 'vocab_overlap', 'llm_eval'];gpt-4o-mini;4096;100;FALSE;cnndm;gpt-4o-mini;"Proceed to summarize the following text. 
+ TEXT : {} 
+ Summary: 
+";0.8821489030122757;0.3761134777710235;0.2487773180253234;19.329753347048975;4.07;3.08;3.42;3.0
+0;FALSE;FALSE;TRUE;auto;FALSE;FALSE;['bertscore', 'rogue', 'vocab_overlap', 'llm_eval'];gpt-4o-mini;4096;100;FALSE;bigpatent;gpt-4o-mini;"Proceed to summarize the following text. 
+ TEXT : {} 
+ Summary: 
+";0.8619749629497528;0.29818750548710593;0.19242905228355145;21.68020770564184;4.25;4.0;4.5;3.0

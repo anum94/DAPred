@@ -26,21 +26,19 @@ class HFDataset:
         if load_csv:
             data = load_dataset("csv", data_files=data_files)
         else:
-            data = load_dataset(ds_name, ds_subset , trust_remote_code=True)
+            data = load_dataset(ds_name, ds_subset, trust_remote_code=True)
+            print("DATASET_NAME:", ds_name)
+            if ds_name == "allenai/multi_lexsum":
+                data = self.combine_document_field(dataset=data)
 
         if preview:
             for k in data.keys():
                 data[k] = data[k].select(range(preview_size))
 
         elif samples != "max":
-            if 'bigpatent' not in ds_name:
-                data["train"] = data["train"].select(
-                    range(min(len(data["train"]), samples))
-                )
-            else:
-                data["train"] = data["test"].select(
-                    range(min(len(data["test"]), samples))
-                )
+            data["train"] = data["test"].select(
+                range(min(len(data["test"]), samples))
+            )
 
         self.ds = self.preprocess(
             data, col_map, min_input_size, remove_columns=remove_columns
@@ -67,6 +65,9 @@ class HFDataset:
                 and len(x) >= min_input_size
             )
 
+        def none_data_filter(example):
+            return example["text"] is not None and example["summary"] is not None
+
         def fn(batch: dict):
             res = {"text": [], "summary": []}
             z = zip(batch["text"], batch["summary"])
@@ -79,8 +80,11 @@ class HFDataset:
 
         logging.info("Preprocessing dataset")
         data = data.rename_columns(col_map)
+
         # save_test = data["test"]
         print(data)
+
+        data = data.filter(none_data_filter)
         # print(len(data["text"]), len(data["summary"]))
         if remove_columns == []:
             data = data.map(
@@ -93,6 +97,19 @@ class HFDataset:
         # data["test"] = save_test
         data.set_format("torch")
         return data
+
+    def combine_document_field(
+        self, dataset: Dataset, document_field: str = "sources"
+    ) -> Dataset:
+        def combine_strings(example):
+            if isinstance(example[document_field], list):
+                example[document_field] = " ".join(example[document_field])
+            return example
+
+        # Apply the function to the dataset
+        updated_dataset = dataset.map(combine_strings)
+
+        return updated_dataset
 
     def preprocess(
         self,

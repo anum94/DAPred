@@ -89,7 +89,7 @@ def get_features( da:str,source:str, target:str, task:str, task_scores)-> (List,
     features += list(domain_spec_features.values())
     feature_names += list(domain_spec_features.keys())
 
-    domain_similarity_features = get_domain_similarity_metrics(target, source)
+    domain_similarity_features = get_domain_similarity_metrics(target, source, num_samples = 20)
     features += list(domain_similarity_features.values())
     feature_names += list(domain_similarity_features.keys())
 
