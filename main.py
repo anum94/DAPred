@@ -91,10 +91,19 @@ if __name__ == '__main__':
     #diamonds.to_excel("training_features.xlsx")
     diamonds = pd.read_excel("training_features.xlsx")
 
-    diamonds.drop('y_weighted_target',axis=1)
+    diamonds.drop(['y_weighted_target',     'target_bert_f1',
+    'target_rouge1',
+    'target_rougeL',
+    'target_vocab_overlap',
+    'target_Relevance',
+    'target_Coherence',
+    'target_Consistency',
+    'target_Fluency'],axis=1)
     diamonds.drop('target', axis=1)
     diamonds.drop('source', axis=1)
     diamonds.drop('learning_difficult', axis=1)
+    diamonds.drop('da-type', axis=1)
+
     print(diamonds.describe())
     diamonds = diamonds.sample(frac = 1)
 
