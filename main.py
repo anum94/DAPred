@@ -5,7 +5,7 @@ import warnings
 import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import Ridge
-#import xgboost as xgb
+import xgboost as xgb
 from dotenv import load_dotenv
 warnings.filterwarnings("ignore")
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
@@ -119,7 +119,7 @@ if __name__ == '__main__':
         X[col] = X[col].astype('category')
     #print (X.dtypes)
 
-    #xgboost(X,y)
+    xgboost(X,y)
     linear_regression(X,y)
 
 
