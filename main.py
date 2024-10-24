@@ -5,7 +5,7 @@ import warnings
 import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import Ridge
-import xgboost as xgb
+#import xgboost as xgb
 from dotenv import load_dotenv
 warnings.filterwarnings("ignore")
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
@@ -91,18 +91,20 @@ if __name__ == '__main__':
     #diamonds.to_excel("training_features.xlsx")
     diamonds = pd.read_excel("training_features.xlsx")
 
-    diamonds.drop(['y_weighted_target',     'target_bert_f1',
+    diamonds = diamonds.drop(['y_weighted_target',     'target_bert_f1',
     'target_rouge1',
     'target_rougeL',
     'target_vocab_overlap',
     'target_Relevance',
     'target_Coherence',
     'target_Consistency',
+    'da-type',
+    'learning_difficult',
+     'source',
+    'target',
+                              'y_weighted_source',
     'target_Fluency'],axis=1)
-    diamonds.drop('target', axis=1)
-    diamonds.drop('source', axis=1)
-    diamonds.drop('learning_difficult', axis=1)
-    diamonds.drop('da-type', axis=1)
+
 
     print(diamonds.describe())
     diamonds = diamonds.sample(frac = 1)
@@ -117,7 +119,7 @@ if __name__ == '__main__':
         X[col] = X[col].astype('category')
     #print (X.dtypes)
 
-    xgboost(X,y)
+    #xgboost(X,y)
     linear_regression(X,y)
 
 
