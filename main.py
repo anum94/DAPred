@@ -85,10 +85,10 @@ if __name__ == '__main__':
                         default="overall_summary.xlsx")
 
     args = parser.parse_args()
-    diamonds = construct_training_corpus(domains=args.domains, da_type=args.da_type,
-                              template_path=args.template_path)
-    print (diamonds.describe())
-    diamonds.to_excel("training_features.xlsx")
+    #diamonds = construct_training_corpus(domains=args.domains, da_type=args.da_type,
+    #                          template_path=args.template_path)
+    #print (diamonds.describe())
+    #diamonds.to_excel("training_features.xlsx")
     diamonds = pd.read_excel("training_features.xlsx")
 
     diamonds.drop('y_weighted_target',axis=1)
