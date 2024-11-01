@@ -5,7 +5,7 @@ import warnings
 import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import Ridge
-import xgboost as xgb
+#import xgboost as xgb
 from dotenv import load_dotenv
 warnings.filterwarnings("ignore")
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
@@ -82,13 +82,13 @@ if __name__ == '__main__':
 
     parser.add_argument('--template_path',
                         type=str,
-                        default="overall_summary.xlsx")
+                        default="overall_summary_ds_9_llama3.1.xlsx")
 
     args = parser.parse_args()
-    #diamonds = construct_training_corpus(domains=args.domains, da_type=args.da_type,
-    #                          template_path=args.template_path)
-    #print (diamonds.describe())
-    #diamonds.to_excel("training_features.xlsx")
+    diamonds = construct_training_corpus(domains=args.domains, da_type=args.da_type,
+                              template_path=args.template_path)
+    print (diamonds.describe())
+    diamonds.to_excel("training_features_llama_3.1_ds_9.xlsx")
     diamonds = pd.read_excel("training_features.xlsx")
 
     diamonds = diamonds.drop(['y_weighted_target',     'target_bert_f1',
@@ -99,10 +99,9 @@ if __name__ == '__main__':
     'target_Coherence',
     'target_Consistency',
     'da-type',
-    'learning_difficult',
      'source',
     'target',
-                              'y_weighted_source',
+    'y_weighted_source',
     'target_Fluency'],axis=1)
 
 
@@ -119,7 +118,7 @@ if __name__ == '__main__':
         X[col] = X[col].astype('category')
     #print (X.dtypes)
 
-    xgboost(X,y)
+    #xgboost(X,y)
     linear_regression(X,y)
 
 

@@ -28,7 +28,7 @@ import itertools
 
 
 def get_task_spec_metrics(domain:str, task:str, task_spec_metrics):
-    task_spec_metrics = task_spec_metrics.drop(["dataset_name"], axis = 1)
+    task_spec_metrics = task_spec_metrics.drop(["dataset_name", "split"], axis = 1)
     if task == "classification":
         return {"accuracy": random.uniform(0, 1)}
     elif task == "summarization":
@@ -39,7 +39,7 @@ def get_task_spec_metrics(domain:str, task:str, task_spec_metrics):
             score_dict = dict()
             for score in task_spec_metrics.columns:
                 score_dict[score] = random.uniform(0, 1)
-
+        #@todo: drop the non-relavant features here so they are not included in y_weighted.
         return score_dict
     else:
         return {}
@@ -89,11 +89,19 @@ def get_features( da:str,source:str, target:str, task:str, task_scores)-> (List,
     features += list(domain_spec_features.values())
     feature_names += list(domain_spec_features.keys())
 
-    domain_similarity_features = get_domain_similarity_metrics(target, source, num_samples = 20)
+    domain_similarity_features = get_domain_similarity_metrics(target, source, num_samples = 10)
     features += list(domain_similarity_features.values())
     feature_names += list(domain_similarity_features.keys())
 
-    source_task_scores = task_scores.loc[task_scores['dataset_name'] == source]
+    try:
+        if source == target and da == "in-domain-adapt":
+            source_task_scores = task_scores.loc[(task_scores['dataset_name'] == source) & (task_scores['split'] == 'train')]
+        else:
+            source_task_scores = task_scores.loc[(task_scores['dataset_name'] == source) & (task_scores['split'] == 'test')]
+    except:
+        #todo: add a dummy variable for this
+        print (f"Failed to get scores for domain {source} for {da} setting. Assigning dummy scores.")
+
     task_specific_feature = get_task_spec_metrics(source, task, source_task_scores)
     features += list(task_specific_feature.values())
     feature_names += [f'source_{key}' for key in list(task_specific_feature.keys())]
@@ -118,11 +126,11 @@ def get_features( da:str,source:str, target:str, task:str, task_scores)-> (List,
 
 def get_template(scores_path:str, domains, ) -> pd.DataFrame:
 
-    task_scores = pd.read_excel(scores_path,)
-    ds_list = list(task_scores["dataset_name"])
-    task_scores = task_scores.drop(columns=task_scores.columns[:15])
-    task_scores["dataset_name"] = ds_list
-    da_type = ["in-domain-adapt", "single-domain-adapt"] #, "multi-domain-adapt"]
+    task_scores = pd.read_excel(scores_path,header=0)
+    task_scores = task_scores.drop(['run_id', 'model', 'prompt'], axis = 1)
+    domains = list(task_scores["dataset_name"])
+    task_scores = task_scores.drop(columns=task_scores.columns[:19])
+    da_type = ["in-domain-adapt", "single-domain-adapt", "no-domain-adapt"] #, "multi-domain-adapt"]
     task = 'summarization'
     feature_names = ['dummy_feature_name'] * (len(task_scores.columns) - 1)
     df = pd.DataFrame()
@@ -130,8 +138,7 @@ def get_template(scores_path:str, domains, ) -> pd.DataFrame:
     for da in da_type:
         features = []
         features.append(da)
-        if da == "in-domain-adapt":
-            # todo: for in-domain, take train split for source and test split for target
+        if da == "in-domain-adapt" or da == "no-domain-adapt":
             for domain in domains:
                 features, feature_names = get_features(da,domain,domain, task, task_scores)
                 if df.columns.empty:

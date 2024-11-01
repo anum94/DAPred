@@ -1,13 +1,23 @@
 from ds.hfdataset import HFDataset
 
 
-class BigPatent(HFDataset):
-    ds_name = "bigpatent"
+class NewsRoom(HFDataset):
+    ds_name = "samsum"
     dataset_kwargs = {
-        "ds_name": "NortheasternUniversity/big_patent",
-        "ds_subset": "e",
-        "col_map": {"description": "text", "abstract": "summary"},
-        "remove_columns": [],
+        "ds_name": "lil-lab/newsroom",
+        "ds_subset": "default",
+        "col_map": {"text": "text", "summary": "summary"},
+        "remove_columns": [
+            "title",
+            "url",
+            "date",
+            "density",
+            "coverage",
+            "compression",
+            "density_bin",
+            "coverage_bin",
+            "compression_bin",
+        ],
     }
 
     def __init__(
@@ -23,6 +33,5 @@ class BigPatent(HFDataset):
             samples=samples,
             min_input_size=min_input_size,
             load_csv=load_csv,
-            data_files=data_files,
             **self.dataset_kwargs,
         )

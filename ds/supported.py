@@ -8,6 +8,7 @@ from ds.cnndm import CNNDailyMail
 from ds.govreport import GovReport
 from ds.hfdataset import HFDataset
 from ds.legalsum import LegalSum
+from ds.newsroom import NewsRoom
 from ds.pubmed import Pubmed
 from ds.samsum import SAMSum
 from ds.wispermed import LaySum
@@ -22,6 +23,7 @@ translate_dataset_name = {
     "samsum": SAMSum,
     "billsum": BillSum,
     "legalsum": LegalSum,
+    "newsroom": NewsRoom,
 }
 
 

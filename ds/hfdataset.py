@@ -26,8 +26,17 @@ class HFDataset:
         if load_csv:
             data = load_dataset("csv", data_files=data_files)
         else:
-            data = load_dataset(ds_name, ds_subset, trust_remote_code=True)
+            if ds_name == "lil-lab/newsroom":
+                data = load_dataset(
+                    ds_name,
+                    data_dir=".cache/huggingface/datasets/newsroom",
+                    trust_remote_code=True,
+                )
+            else:
+                data = load_dataset(ds_name, ds_subset, trust_remote_code=True)
+
             print("DATASET_NAME:", ds_name)
+
             if ds_name == "allenai/multi_lexsum":
                 data = self.combine_document_field(dataset=data)
 
@@ -36,8 +45,8 @@ class HFDataset:
                 data[k] = data[k].select(range(preview_size))
 
         elif samples != "max":
-            data["train"] = data["test"].select(
-                range(min(len(data["test"]), samples))
+            data["train"] = data["train"].select(
+                range(min(len(data["train"]), samples))
             )
 
         self.ds = self.preprocess(
