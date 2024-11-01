@@ -5,13 +5,15 @@ import warnings
 import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import Ridge
-#import xgboost as xgb
+import xgboost as xgb
 from dotenv import load_dotenv
+
 warnings.filterwarnings("ignore")
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 from features.features import construct_training_corpus
 
-def xgboost(X, y ):
+
+def xgboost(X, y):
     # Split the data
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
     # Create regression matrices
@@ -45,7 +47,8 @@ def xgboost(X, y ):
     print(f"Mean Absolute Error: {mae:.2f}")
     print(f"R^2 Score: {r2:.2f}")
 
-def linear_regression(X, y ):
+
+def linear_regression(X, y):
     # Split the dataset into training and testing sets
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
@@ -69,6 +72,35 @@ def linear_regression(X, y ):
     print("Coefficients:", ridge_reg.coef_)
     print("Intercept:", ridge_reg.intercept_)
 
+def weighted_average(nums, weights):
+  return sum(x * y for x, y in zip(nums, weights)) / sum(weights)
+def derive_baseline_features(feature_path):
+    df = pd.read_excel(feature_path)
+    print (df.columns)
+    df = df[['learning_difficult', 'word-overlap', 'vocab-overlap', 'relevance-overlap',
+             'renyi-divergence', 'kl-divergence', 'js-divergence',
+             #'source_rouge1', 'source_rouge2', 'source_rougeL', 'source_rougeLsum',
+             #'source_vocab_overlap',
+             'target_rouge1', 'target_rouge2', 'target_rougeL',
+       'target_rougeLsum', 'target_vocab_overlap', 'y_weighted_source',
+       'y_weighted_target', 'y_drop'
+             ]]
+
+    feature_weight = [1 / 5] * 5
+    #weighted_y_target = weighted_average(list(task_specific_feature.values()), feature_weight)
+
+    #y_drop = weighted_y_source - weighted_y_target
+
+    #features += [weighted_y_target, weighted_y_source, y_drop]
+    #feature_names += ['y_weighted_source', 'y_weighted_target', 'y_drop']
+    print(df.describe())
+    df = df.sample(frac=1)
+
+    # Extract feature and target arrays
+    X, y = df.drop('y_drop', axis=1), df[['y_drop']]
+    return X, y
+
+
 if __name__ == '__main__':
     load_dotenv()
     parser = argparse.ArgumentParser()
@@ -78,35 +110,38 @@ if __name__ == '__main__':
     parser.add_argument('--domain',
                         dest="domains",
                         action='append',
-                        default=['arxiv', 'pubmed', 'govreport', 'wispermed', 'cnndm', 'samsum', 'bigpatent', 'billsum',])
+                        default=['arxiv', 'pubmed', 'govreport', 'wispermed', 'cnndm', 'samsum', 'bigpatent',
+                                 'billsum', ])
 
     parser.add_argument('--template_path',
                         type=str,
-                        default="overall_summary_ds_9_llama3.1.xlsx")
+                        default="training_features_llama_3.1_ds_9.xlsx")
 
     args = parser.parse_args()
-    diamonds = construct_training_corpus(domains=args.domains, da_type=args.da_type,
-                              template_path=args.template_path)
-    print (diamonds.describe())
-    diamonds.to_excel("training_features_llama_3.1_ds_9.xlsx")
-    diamonds = pd.read_excel("training_features.xlsx")
+    #diamonds = construct_training_corpus(domains=args.domains, da_type=args.da_type,
+     #                                    template_path=args.template_path)
+    #print(diamonds.describe())
+    file_name = "training_features_llama_3.1_ds_9.xlsx"
+    #diamonds.to_excel(file_name)
+    diamonds = pd.read_excel(file_name)
 
-    diamonds = diamonds.drop(['y_weighted_target',     'target_bert_f1',
-    'target_rouge1',
-    'target_rougeL',
-    'target_vocab_overlap',
-    'target_Relevance',
-    'target_Coherence',
-    'target_Consistency',
-    'da-type',
-     'source',
-    'target',
-    'y_weighted_source',
-    'target_Fluency'],axis=1)
-
+    diamonds = diamonds.drop(['y_weighted_target', 'target_bert_f1',
+                              'source_rouge1',
+                              'target_rougeL',
+                              'target_vocab_overlap',
+                              'target_Relevance',
+                              'target_Coherence',
+                              'target_Consistency',
+                              'target_Fluency',
+                              'da-type',
+                              'source',
+                              'target',
+                              'y_weighted_source',
+                              'target_fs_wiki', 'target_fs_grounded', 'y_weighted_source',
+                              ], axis=1)
 
     print(diamonds.describe())
-    diamonds = diamonds.sample(frac = 1)
+    diamonds = diamonds.sample(frac=1)
 
     # Extract feature and target arrays
     X, y = diamonds.drop('y_drop', axis=1), diamonds[['y_drop']]
@@ -116,10 +151,13 @@ if __name__ == '__main__':
     # Convert to Pandas category
     for col in cats:
         X[col] = X[col].astype('category')
-    #print (X.dtypes)
+    # print (X.dtypes)
 
-    #xgboost(X,y)
-    linear_regression(X,y)
+    X_base, y_base = derive_baseline_features(file_name)
+    xgboost(X, y)
+    xgboost(X,y)
+    linear_regression(X, y)
+    linear_regression(X, y)
 
 
 
