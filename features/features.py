@@ -135,18 +135,18 @@ def get_template(scores_path:str, domains, ) -> pd.DataFrame:
     feature_names = ['dummy_feature_name'] * (len(task_scores.columns) - 1)
     df = pd.DataFrame()
 
-    for da in da_type:
+    for da in tqdm(da_type):
         features = []
         features.append(da)
         if da == "in-domain-adapt" or da == "no-domain-adapt":
-            for domain in domains:
+            for domain in tqdm(domains):
                 features, feature_names = get_features(da,domain,domain, task, task_scores)
                 if df.columns.empty:
                     df = pd.DataFrame(columns=feature_names)
                 df.loc[len(df)] = features
 
         elif da == "single-domain-adapt":
-            for source in domains:
+            for source in tqdm(domains):
                 domains_copy = domains.copy()
                 domains_copy.remove(source)
                 for target in domains_copy:

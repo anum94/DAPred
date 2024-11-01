@@ -72,7 +72,7 @@ class Domain:
         domain_words = []
         sentence_embeddings = []
         print(f"Processing {self.name} data.")
-        for i in tqdm(range(len(data))):
+        for i in range(len(data)):
             document = self.process_text(data[i])
             domain_words.append(document)
             article = data[i]
