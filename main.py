@@ -154,9 +154,14 @@ if __name__ == '__main__':
     # print (X.dtypes)
 
     X_base, y_base = derive_baseline_features(file_name)
+    print ("Baseline xgboost")
+    xgboost(X_base,y_base)
+    print(" xgboost")
+
     xgboost(X, y)
-    xgboost(X,y)
-    linear_regression(X, y)
+    print("Baseline Regression")
+    linear_regression(X_base, y_base)
+    print("Regression")
     linear_regression(X, y)
 
 
