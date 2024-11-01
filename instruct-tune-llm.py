@@ -8,10 +8,10 @@ import matplotlib.pyplot as plt
 from datasets import Dataset, load_dataset
 from transformers import pipeline, set_seed
 from transformers import AutoModelForSeq2SeqLM, AutoTokenizer
-
+from huggingface_hub import login
 import warnings
 warnings.filterwarnings("ignore")
-
+login("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")
 huggingface_dataset_name = "cnn_dailymail"
 
 dataset = load_dataset(huggingface_dataset_name, "3.0.0")
@@ -54,18 +54,18 @@ test_data = dataset['test'].shuffle(seed=42).select([i for i in range(100)])
 validation_data = dataset['validation'].shuffle(seed=42).select([i for i in range(100)])
 
 import torch
-from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
+from transformers import AutoTokenizer, AutoModelForCausalLM #, BitsAndBytesConfig
 
 model_id =  "meta-llama/Llama-3.2-1B-Instruct"
 
-bnb_config = BitsAndBytesConfig(
-    load_in_4bit=True,
-    bnb_4bit_use_double_quant=True,
-    bnb_4bit_quant_type="nf4",
-    bnb_4bit_compute_dtype=torch.bfloat16
-)
+#bnb_config = BitsAndBytesConfig(
+#    load_in_4bit=True,
+#    bnb_4bit_use_double_quant=True,
+#    bnb_4bit_quant_type="nf4",
+#    bnb_4bit_compute_dtype=torch.bfloat16
+#)
 
-model = AutoModelForCausalLM.from_pretrained(model_id, quantization_config=bnb_config, device_map="auto")
+model = AutoModelForCausalLM.from_pretrained(model_id, device_map="auto") #, quantization_config=bnb_config)
 
 tokenizer = AutoTokenizer.from_pretrained(model_id)
 tokenizer.pad_token = tokenizer.eos_token
@@ -173,7 +173,7 @@ trainer = SFTTrainer(
     eval_dataset=validation_data,
     peft_config=lora_config,
     dataset_text_field="text",
-    max_seq_length=1024,
+    max_seq_length=256,
     tokenizer=tokenizer,
     args=training_arguments,
 )

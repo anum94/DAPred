@@ -13,3 +13,5 @@ scikit-learn
 datasets
 rank-bm25
 torch
+bitsandbytes
+peft

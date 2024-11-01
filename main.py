@@ -1,17 +1,23 @@
 import argparse
 import numpy as np
 import warnings
-
+import numpy as np
 import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import Ridge
-import xgboost as xgb
+#import xgboost as xgb
 from dotenv import load_dotenv
 
 warnings.filterwarnings("ignore")
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 from features.features import construct_training_corpus
 
+baseline_feature_target = ['target_rouge1', 'target_rouge2', 'target_rougeL', 'target_rougeLsum',
+                           'target_vocab_overlap']
+baseline_feature_source = ['source_rouge1', 'source_rouge2', 'source_rougeL', 'source_rougeLsum',
+                           'source_vocab_overlap']
+domain_specific_features = ['learning_difficult', 'word-overlap', 'vocab-overlap', 'relevance-overlap',
+                            'renyi-divergence', 'kl-divergence', 'js-divergence', ]
 
 def xgboost(X, y):
     # Split the data
@@ -74,25 +80,31 @@ def linear_regression(X, y):
 
 def weighted_average(nums, weights):
   return sum(x * y for x, y in zip(nums, weights)) / sum(weights)
+def weighted_average_list(nums, weights):
+  results = []
+  for num in nums:
+      res = sum(x * y for x, y in zip(num, weights)) / sum(weights)
+      results.append(res)
+  return results
+
+
 def derive_baseline_features(feature_path):
     df = pd.read_excel(feature_path)
-    print (df.columns)
-    df = df[['learning_difficult', 'word-overlap', 'vocab-overlap', 'relevance-overlap',
-             'renyi-divergence', 'kl-divergence', 'js-divergence',
-             #'source_rouge1', 'source_rouge2', 'source_rougeL', 'source_rougeLsum',
-             #'source_vocab_overlap',
-             'target_rouge1', 'target_rouge2', 'target_rougeL',
-       'target_rougeLsum', 'target_vocab_overlap', 'y_weighted_source',
-       'y_weighted_target', 'y_drop'
-             ]]
+    df = df[domain_specific_features + baseline_feature_source + baseline_feature_target]
 
-    feature_weight = [1 / 5] * 5
-    #weighted_y_target = weighted_average(list(task_specific_feature.values()), feature_weight)
+    feature_weight = [1 / len(baseline_feature_target)] * len(baseline_feature_target)
 
-    #y_drop = weighted_y_source - weighted_y_target
+    weighted_y_target = weighted_average_list((df[baseline_feature_target]).values, feature_weight)
+    weighted_y_source = weighted_average_list(df[baseline_feature_source].values, feature_weight)
 
-    #features += [weighted_y_target, weighted_y_source, y_drop]
-    #feature_names += ['y_weighted_source', 'y_weighted_target', 'y_drop']
+    y_drop = np.subtract(weighted_y_source, weighted_y_target)
+
+    df['weighted_y_target'] = weighted_y_target
+    df['weighted_y_source'] = weighted_y_source
+    df['y_drop'] = y_drop
+
+    df = df.drop(baseline_feature_target + ['weighted_y_target'], axis=1)
+
     print(df.describe())
     df = df.sample(frac=1)
 
@@ -126,8 +138,7 @@ if __name__ == '__main__':
     diamonds = pd.read_excel(file_name)
 
     diamonds = diamonds.drop(['y_weighted_target', 'target_bert_f1',
-                              'source_rouge1',
-                              'target_rougeL',
+                              'target_rouge1', 'target_rouge2', 'target_rougeL', 'target_rougeLsum',
                               'target_vocab_overlap',
                               'target_Relevance',
                               'target_Coherence',
@@ -136,8 +147,8 @@ if __name__ == '__main__':
                               'da-type',
                               'source',
                               'target',
-                              'y_weighted_source',
-                              'target_fs_wiki', 'target_fs_grounded', 'y_weighted_source',
+                            'target_fs_grounded', 'Unnamed: 0',
+                              'target_bert_precision', 'target_bert_recall',
                               ], axis=1)
 
     print(diamonds.describe())
@@ -154,11 +165,11 @@ if __name__ == '__main__':
     # print (X.dtypes)
 
     X_base, y_base = derive_baseline_features(file_name)
-    print ("Baseline xgboost")
-    xgboost(X_base,y_base)
-    print(" xgboost")
+    #print ("Baseline xgboost")
+    #xgboost(X_base,y_base)
+    #print(" xgboost")
 
-    xgboost(X, y)
+    #xgboost(X, y)
     print("Baseline Regression")
     linear_regression(X_base, y_base)
     print("Regression")
