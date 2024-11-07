@@ -1,10 +1,13 @@
 import logging
 from typing import Mapping, Sequence, Union
 
+from ds.aclsum import AclSum
 from ds.arxiv import Arxiv
 from ds.bigpatent import BigPatent
 from ds.billsum import BillSum
 from ds.cnndm import CNNDailyMail
+from ds.dialogsum import DialogSum
+from ds.gigaword import GigaWord
 from ds.govreport import GovReport
 from ds.hfdataset import HFDataset
 from ds.legalsum import LegalSum
@@ -12,6 +15,7 @@ from ds.newsroom import NewsRoom
 from ds.pubmed import Pubmed
 from ds.samsum import SAMSum
 from ds.wispermed import LaySum
+from ds.xlsum import XlSum
 
 translate_dataset_name = {
     "arxiv": Arxiv,
@@ -24,6 +28,10 @@ translate_dataset_name = {
     "billsum": BillSum,
     "legalsum": LegalSum,
     "newsroom": NewsRoom,
+    "gigaword": GigaWord,
+    "xlsum": XlSum,
+    "aclsum": AclSum,
+    "dialogsum": DialogSum,
 }
 
 

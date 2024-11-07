@@ -48,19 +48,22 @@ def get_domain_specific_metrics(domain:str):
     return {"learning_difficult": random.uniform(0, 1)}
 
 
-def get_domain_similarity_metrics(source:str, target:str, num_samples = 100):
-
+def get_domain_similarity_metrics(source:str, target:str, da:str, num_samples = 100):
     s_dataset = load_dataset(
             dataset=source,
             samples=num_samples,
         )
-    s_dval = s_dataset.get_split("train")['text']
+    if source == target and da == "in-domain-adapt":
+
+        s_dval = s_dataset.get_split("train")['text']
+    else:
+        s_dval = s_dataset.get_split("test")['text']
 
     t_dataset = load_dataset(
         dataset=target,
         samples=num_samples,
     )
-    t_dval = t_dataset.get_split("train")['text']
+    t_dval = t_dataset.get_split("test")['text']
 
     client = OpenAI()
 
@@ -89,7 +92,7 @@ def get_features( da:str,source:str, target:str, task:str, task_scores)-> (List,
     features += list(domain_spec_features.values())
     feature_names += list(domain_spec_features.keys())
 
-    domain_similarity_features = get_domain_similarity_metrics(target, source, num_samples = 10)
+    domain_similarity_features = get_domain_similarity_metrics(target, source,da,  num_samples = 1)
     features += list(domain_similarity_features.values())
     feature_names += list(domain_similarity_features.keys())
 

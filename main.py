@@ -12,9 +12,9 @@ warnings.filterwarnings("ignore")
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 from features.features import construct_training_corpus
 
-baseline_feature_target = ['target_rouge1', 'target_rouge2', 'target_rougeL', 'target_rougeLsum',
+baseline_feature_target = ['target_rouge1', 'target_rouge2', 'target_rougeL',
                            'target_vocab_overlap']
-baseline_feature_source = ['source_rouge1', 'source_rouge2', 'source_rougeL', 'source_rougeLsum',
+baseline_feature_source = ['source_rouge1', 'source_rouge2', 'source_rougeL',
                            'source_vocab_overlap']
 domain_specific_features = ['learning_difficult', 'word-overlap', 'vocab-overlap', 'relevance-overlap',
                             'renyi-divergence', 'kl-divergence', 'js-divergence', ]
@@ -127,18 +127,18 @@ if __name__ == '__main__':
 
     parser.add_argument('--template_path',
                         type=str,
-                        default="training_features_llama_3.1_ds_9.xlsx")
+                        default="overall_summary_ds_14_llama3.1_8b_zeroshot.xlsx")
 
     args = parser.parse_args()
-    #diamonds = construct_training_corpus(domains=args.domains, da_type=args.da_type,
-     #                                    template_path=args.template_path)
-    #print(diamonds.describe())
+    diamonds = construct_training_corpus(domains=args.domains, da_type=args.da_type,
+                                        template_path=args.template_path)
+    print(diamonds.describe())
     file_name = "training_features_llama_3.1_ds_9.xlsx"
     #diamonds.to_excel(file_name)
     diamonds = pd.read_excel(file_name)
 
     diamonds = diamonds.drop(['y_weighted_target', 'target_bert_f1',
-                              'target_rouge1', 'target_rouge2', 'target_rougeL', 'target_rougeLsum',
+                              'target_rouge1', 'target_rouge2', 'target_rougeL',
                               'target_vocab_overlap',
                               'target_Relevance',
                               'target_Coherence',

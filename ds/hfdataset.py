@@ -35,10 +35,12 @@ class HFDataset:
             else:
                 data = load_dataset(ds_name, ds_subset, trust_remote_code=True)
 
-            #print("DATASET_NAME:", ds_name)
+            print("DATASET_NAME:", ds_name)
 
             if ds_name == "allenai/multi_lexsum":
                 data = self.combine_document_field(dataset=data)
+            elif ds_name == "sobamchan/aclsum":
+                data = self.combine_columns(dataset=data)
 
         if preview:
             for k in data.keys():
@@ -113,6 +115,20 @@ class HFDataset:
         def combine_strings(example):
             if isinstance(example[document_field], list):
                 example[document_field] = " ".join(example[document_field])
+            return example
+
+        # Apply the function to the dataset
+        updated_dataset = dataset.map(combine_strings)
+
+        return updated_dataset
+
+    def combine_columns(
+        self, dataset: Dataset, document_field: str = "sources"
+    ) -> Dataset:
+        def combine_strings(example):
+            example["summary"] = (
+                f"{example['challenge']} \n {example['approach']} \n {example['outcome']}"
+            )
             return example
 
         # Apply the function to the dataset
