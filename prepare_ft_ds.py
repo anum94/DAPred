@@ -3,6 +3,7 @@ from datasets.dataset_dict import DatasetDict
 from huggingface_hub import login
 login ("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")
 hf_repo_name = {
+    "wispermed": "anumafzal94/wispermed_10k_finetuning",
     "bigpatent": "anumafzal94/bigpatent_10k_finetuning",
     "pubmed": "anumafzal94/pubmed_10k_finetuning",
     "cnndm": "anumafzal94/cnndm_10k_finetuning",
@@ -16,7 +17,7 @@ hf_repo_name = {
     "xlsum": "anumafzal94/xlsum_10k_finetuning",
     "govreport": "anumafzal94/govreport_10k_finetuning",
      "arxiv": "anumafzal94/arxiv_10k_finetuning",
-    "wispermed": "anumafzal94/wispermed_10k_finetuning",
+
 }
 
 

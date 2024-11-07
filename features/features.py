@@ -58,12 +58,14 @@ def get_domain_similarity_metrics(source:str, target:str, da:str, num_samples = 
         s_dval = s_dataset.get_split("train")['text']
     else:
         s_dval = s_dataset.get_split("test")['text']
+        s_dval = s_dval[:num_samples]
 
     t_dataset = load_dataset(
         dataset=target,
         samples=num_samples,
     )
     t_dval = t_dataset.get_split("test")['text']
+    t_dval = s_dval[:num_samples]
 
     client = OpenAI()
 

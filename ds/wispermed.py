@@ -4,8 +4,8 @@ from ds.hfdataset import HFDataset
 class LaySum(HFDataset):
     ds_name = "wispermed"
     dataset_kwargs = {
-        "ds_name": "ishwor-subedi621/slice1000_wispermed",
-        "ds_subset": "default",
+        "ds_name": "tomasg25/scientific_lay_summarisation",
+        "ds_subset": "plos",
         "col_map": {"article": "text", "summary": "summary"},
         "remove_columns": ["section_headings", "keywords", "year", "title"],
     }
