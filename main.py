@@ -5,7 +5,8 @@ import numpy as np
 import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import Ridge
-#import xgboost as xgb
+import xgboost as xgb
+from sklearn.preprocessing import normalize
 from dotenv import load_dotenv
 
 warnings.filterwarnings("ignore")
@@ -18,7 +19,12 @@ baseline_feature_source = ['source_rouge1', 'source_rouge2', 'source_rougeL',
                            'source_vocab_overlap']
 domain_specific_features = ['learning_difficult', 'word-overlap', 'vocab-overlap', 'relevance-overlap',
                             'renyi-divergence', 'kl-divergence', 'js-divergence', ]
-
+features_to_normalize = {'source': ['source_bert_precision', 'source_bert_recall', 'source_bert_f1', 'source_vocab_overlap',
+                            'source_Relevance', 'source_Coherence', 'source_Consistency', 'source_Fluency'],
+                         'all': ['renyi-divergence', 'kl-divergence', 'js-divergence',] ,
+                         'target': ['target_vocab_overlap', 'target_Relevance', 'target_Coherence', 'target_Consistency',
+                                    'target_Fluency', 'target_bert_precision', 'target_bert_recall', 'target_bert_f1']
+                         }
 def xgboost(X, y):
     # Split the data
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
@@ -105,12 +111,40 @@ def derive_baseline_features(feature_path):
 
     df = df.drop(baseline_feature_target + ['weighted_y_target'], axis=1)
 
-    print(df.describe())
     df = df.sample(frac=1)
 
     # Extract feature and target arrays
     X, y = df.drop('y_drop', axis=1), df[['y_drop']]
     return X, y
+def NormalizeData(data):
+    return (data - np.min(data)) / (np.max(data) - np.min(data))
+def normalize_features(df):
+        def norm(df, features_to_normalize, update_y = None, a = None):
+            for feature in features_to_normalize:
+                numbers = np.array(df[feature]).reshape((-1,1))
+                df[feature] = NormalizeData(numbers)
+            weighted_y_col = []
+            if a is not None:
+                for col in df.columns:
+                    if a in col:
+                        weighted_y_col.append(col)
+
+                # update weighted y
+                feature_weight = [1 / len(weighted_y_col)] * len(weighted_y_col)
+
+                df[update_y] = weighted_average_list((df[weighted_y_col]).values, feature_weight)
+
+            return df
+
+        #print (df.columns)
+        # normalize all
+        df = norm(df, features_to_normalize['all'])
+        # normalize target
+        df = norm(df, features_to_normalize['target'], update_y= 'y_weighted_target', a = 'target_')
+        # normalize source
+        df = norm(df, features_to_normalize['source'], update_y='y_weighted_source', a= 'source_')
+        df['y_drop'] = df['y_weighted_source'] - df['y_weighted_target']
+        return df
 
 
 if __name__ == '__main__':
@@ -130,12 +164,13 @@ if __name__ == '__main__':
                         default="overall_summary_ds_14_llama3.1_8b_zeroshot.xlsx")
 
     args = parser.parse_args()
-    diamonds = construct_training_corpus(domains=args.domains, da_type=args.da_type,
-                                        template_path=args.template_path)
-    print(diamonds.describe())
-    file_name = "training_features_llama_3.1_ds_9.xlsx"
+    #diamonds = construct_training_corpus(domains=args.domains, da_type=args.da_type,
+    #                                    template_path=args.template_path)
+    #print(diamonds.describe())
+    file_name = "training_features_ds_14_llama3.1_8b_zeroshot_100.xlsx"
     #diamonds.to_excel(file_name)
     diamonds = pd.read_excel(file_name)
+    diamonds_norm = normalize_features(diamonds)
 
     diamonds = diamonds.drop(['y_weighted_target', 'target_bert_f1',
                               'target_rouge1', 'target_rouge2', 'target_rougeL',
@@ -146,12 +181,11 @@ if __name__ == '__main__':
                               'target_Fluency',
                               'da-type',
                               'source',
-                              'target',
-                            'target_fs_grounded', 'Unnamed: 0',
+                              'target', 'learning_difficult',
+                            'target_fs_grounded', 'Unnamed: 0', 'learning_difficult',
                               'target_bert_precision', 'target_bert_recall',
                               ], axis=1)
 
-    print(diamonds.describe())
     diamonds = diamonds.sample(frac=1)
 
     # Extract feature and target arrays
@@ -165,15 +199,57 @@ if __name__ == '__main__':
     # print (X.dtypes)
 
     X_base, y_base = derive_baseline_features(file_name)
-    #print ("Baseline xgboost")
-    #xgboost(X_base,y_base)
-    #print(" xgboost")
+    print ("Baseline xgboost")
+    xgboost(X_base,y_base)
+    print(" xgboost")
 
-    #xgboost(X, y)
-    print("Baseline Regression")
+    xgboost(X, y)
+    print("Baseline Regression model with only N-gram based features")
     linear_regression(X_base, y_base)
-    print("Regression")
+    print("Regression with model only all features")
     linear_regression(X, y)
+
+    print ("With Features normalized")
+    diamonds_norm = diamonds_norm.drop(['y_weighted_target', 'target_bert_f1',
+                              'target_rouge1', 'target_rouge2', 'target_rougeL',
+                              'target_vocab_overlap',
+                              'target_Relevance',
+                              'target_Coherence',
+                              'target_Consistency',
+                              'target_Fluency',
+                              'da-type',
+                              'source',
+                              'target', 'learning_difficult',
+                              'target_fs_grounded', 'Unnamed: 0',
+                              'target_bert_precision', 'target_bert_recall',
+                              ], axis=1)
+
+    diamonds_norm = diamonds_norm.sample(frac=1)
+
+    # Extract feature and target arrays
+    X, y = diamonds_norm.drop('y_drop', axis=1), diamonds_norm[['y_drop']]
+    # Extract text features
+    cats = X.select_dtypes(exclude=np.number).columns.tolist()
+
+    # Convert to Pandas category
+    for col in cats:
+        X[col] = X[col].astype('category')
+    # print (X.dtypes)
+
+    X_base, y_base = derive_baseline_features(file_name)
+    print ("Baseline xgboost")
+    xgboost(X_base,y_base)
+    print(" xgboost")
+
+    xgboost(X, y)
+    print("Baseline Regression model with only N-gram based features")
+    linear_regression(X_base, y_base)
+    print("Regression with model only all features")
+    linear_regression(X, y)
+
+
+
+
 
 
 

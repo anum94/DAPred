@@ -65,7 +65,7 @@ def get_domain_similarity_metrics(source:str, target:str, da:str, num_samples = 
         samples=num_samples,
     )
     t_dval = t_dataset.get_split("test")['text']
-    t_dval = s_dval[:num_samples]
+    t_dval = t_dval[:num_samples]
 
     client = OpenAI()
 
@@ -94,7 +94,7 @@ def get_features( da:str,source:str, target:str, task:str, task_scores)-> (List,
     features += list(domain_spec_features.values())
     feature_names += list(domain_spec_features.keys())
 
-    domain_similarity_features = get_domain_similarity_metrics(target, source,da,  num_samples = 1)
+    domain_similarity_features = get_domain_similarity_metrics(target, source,da,  num_samples = 100)
     features += list(domain_similarity_features.values())
     feature_names += list(domain_similarity_features.keys())
 
@@ -133,7 +133,8 @@ def get_template(scores_path:str, domains, ) -> pd.DataFrame:
 
     task_scores = pd.read_excel(scores_path,header=0)
     task_scores = task_scores.drop(['run_id', 'model', 'prompt'], axis = 1)
-    domains = list(task_scores["dataset_name"])
+    domains = list(set(task_scores["dataset_name"]))
+    #domains.remove("samsum")
     task_scores = task_scores.drop(columns=task_scores.columns[:19])
     da_type = ["in-domain-adapt", "single-domain-adapt", "no-domain-adapt"] #, "multi-domain-adapt"]
     task = 'summarization'
