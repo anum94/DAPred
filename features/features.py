@@ -73,12 +73,14 @@ def get_domain_similarity_metrics(source:str, target:str, da:str, num_samples = 
     T = Domain(t_dval, target, client) #, unique=True)
     ST = Similarity(S, T)
 
-    return {"word-overlap": ST.word_overlap,
+    return {
     "vocab-overlap": ST.vocab_overlap,
-    "relevance-overlap": ST.relevance_overlap,
-    "renyi-divergence": ST.renyi_divergence,
+    "tf-df-overlap": ST.tf_idf_overlap,
+    "source_shannon_entropy": S.shannon_entropy,
+    "target_shannon_entropy": T.shannon_entropy,
     "kl-divergence": ST.kl_divergence,
     "js-divergence": ST.js_divergence,
+        "contextual-overlap": ST.contextual_overlap
     }
 
 def weighted_average(nums, weights):
@@ -94,7 +96,7 @@ def get_features( da:str,source:str, target:str, task:str, task_scores)-> (List,
     features += list(domain_spec_features.values())
     feature_names += list(domain_spec_features.keys())
 
-    domain_similarity_features = get_domain_similarity_metrics(target, source,da,  num_samples = 100)
+    domain_similarity_features = get_domain_similarity_metrics(target, source,da,  num_samples = 10)
     features += list(domain_similarity_features.values())
     feature_names += list(domain_similarity_features.keys())
 
@@ -134,7 +136,6 @@ def get_template(scores_path:str, domains, ) -> pd.DataFrame:
     task_scores = pd.read_excel(scores_path,header=0)
     task_scores = task_scores.drop(['run_id', 'model', 'prompt'], axis = 1)
     domains = list(set(task_scores["dataset_name"]))
-    #domains.remove("samsum")
     task_scores = task_scores.drop(columns=task_scores.columns[:19])
     da_type = ["in-domain-adapt", "single-domain-adapt", "no-domain-adapt"] #, "multi-domain-adapt"]
     task = 'summarization'

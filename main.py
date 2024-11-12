@@ -15,13 +15,16 @@ from features.features import construct_training_corpus
 
 baseline_feature_target = ['target_rouge1', 'target_rouge2', 'target_rougeL',
                            'target_vocab_overlap']
+
 baseline_feature_source = ['source_rouge1', 'source_rouge2', 'source_rougeL',
                            'source_vocab_overlap']
-domain_specific_features = ['learning_difficult', 'word-overlap', 'vocab-overlap', 'relevance-overlap',
-                            'renyi-divergence', 'kl-divergence', 'js-divergence', ]
+
+domain_specific_features = ['learning_difficult', 'vocab-overlap', 'tf-df-overlap',
+                             'kl-divergence', 'js-divergence', 'contextual-overlap']
+
 features_to_normalize = {'source': ['source_bert_precision', 'source_bert_recall', 'source_bert_f1', 'source_vocab_overlap',
                             'source_Relevance', 'source_Coherence', 'source_Consistency', 'source_Fluency'],
-                         'all': ['renyi-divergence', 'kl-divergence', 'js-divergence',] ,
+                         'all': ['source_shannon_entropy','target_shannon_entropy', 'kl-divergence', 'js-divergence',] ,
                          'target': ['target_vocab_overlap', 'target_Relevance', 'target_Coherence', 'target_Consistency',
                                     'target_Fluency', 'target_bert_precision', 'target_bert_recall', 'target_bert_f1']
                          }
@@ -109,7 +112,7 @@ def derive_baseline_features(feature_path):
     df['weighted_y_source'] = weighted_y_source
     df['y_drop'] = y_drop
 
-    df = df.drop(baseline_feature_target + ['weighted_y_target'], axis=1)
+    df = df.drop(baseline_feature_target + ['weighted_y_target', 'contextual-overlap'], axis=1)
 
     df = df.sample(frac=1)
 
@@ -164,15 +167,15 @@ if __name__ == '__main__':
                         default="overall_summary_ds_14_llama3.1_8b_zeroshot.xlsx")
 
     args = parser.parse_args()
-    #diamonds = construct_training_corpus(domains=args.domains, da_type=args.da_type,
-    #                                    template_path=args.template_path)
-    #print(diamonds.describe())
-    file_name = "training_features_ds_14_llama3.1_8b_zeroshot_100.xlsx"
-    #diamonds.to_excel(file_name)
-    diamonds = pd.read_excel(file_name)
-    diamonds_norm = normalize_features(diamonds)
+    features = construct_training_corpus(domains=args.domains, da_type=args.da_type,
+                                        template_path=args.template_path)
+    #print(features.describe())
+    file_name = "training_features_ds_14_llama3.1_8b_zeroshot_10.xlsx"
+    #features.to_excel(file_name)
+    features = pd.read_excel(file_name)
+    features_norm = normalize_features(features)
 
-    diamonds = diamonds.drop(['y_weighted_target', 'target_bert_f1',
+    features = features.drop(['y_weighted_target', 'target_bert_f1',
                               'target_rouge1', 'target_rouge2', 'target_rougeL',
                               'target_vocab_overlap',
                               'target_Relevance',
@@ -186,10 +189,10 @@ if __name__ == '__main__':
                               'target_bert_precision', 'target_bert_recall',
                               ], axis=1)
 
-    diamonds = diamonds.sample(frac=1)
+    features = features.sample(frac=1)
 
     # Extract feature and target arrays
-    X, y = diamonds.drop('y_drop', axis=1), diamonds[['y_drop']]
+    X, y = features.drop('y_drop', axis=1), features[['y_drop']]
     # Extract text features
     cats = X.select_dtypes(exclude=np.number).columns.tolist()
 
@@ -210,7 +213,7 @@ if __name__ == '__main__':
     linear_regression(X, y)
 
     print ("With Features normalized")
-    diamonds_norm = diamonds_norm.drop(['y_weighted_target', 'target_bert_f1',
+    features_norm = features_norm.drop(['y_weighted_target', 'target_bert_f1',
                               'target_rouge1', 'target_rouge2', 'target_rougeL',
                               'target_vocab_overlap',
                               'target_Relevance',
@@ -224,10 +227,10 @@ if __name__ == '__main__':
                               'target_bert_precision', 'target_bert_recall',
                               ], axis=1)
 
-    diamonds_norm = diamonds_norm.sample(frac=1)
+    features_norm = features_norm.sample(frac=1)
 
     # Extract feature and target arrays
-    X, y = diamonds_norm.drop('y_drop', axis=1), diamonds_norm[['y_drop']]
+    X, y = features_norm.drop('y_drop', axis=1), features_norm[['y_drop']]
     # Extract text features
     cats = X.select_dtypes(exclude=np.number).columns.tolist()
 

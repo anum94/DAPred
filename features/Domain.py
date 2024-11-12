@@ -1,5 +1,7 @@
 # Imports
 import re
+from collections import Counter
+
 from tqdm import tqdm
 import nltk
 from nltk.corpus import stopwords
@@ -7,14 +9,12 @@ from nltk.tokenize import word_tokenize
 import numpy as np
 import pandas as pd
 from sklearn.feature_extraction.text import (
-    TfidfTransformer,
-    CountVectorizer,
     TfidfVectorizer,
 )
 from rank_bm25 import BM25Okapi
 from nltk.stem import WordNetLemmatizer
 
-
+from scipy.stats import entropy
 # Definitions
 nltk.download("stopwords", quiet=True)
 STOP_WORDS = set(stopwords.words("english"))
@@ -33,7 +33,7 @@ class Domain:
     @field token_frequencies - dictionary of tokens to their relative frequency in domain
     @field vocab_size - size of unique vocabulary
     @field dataset_size - number of texts in this domain corpus
-    @field tfidf, tfidf_X - TFIDF vectorizer and corresponding vectorized array of documents
+    @field tfidf_topwords - TFIDD weighted top words
     """
 
     def __init__(self, file_paths: list, file_names: list, client=None):
@@ -43,15 +43,21 @@ class Domain:
         @param file_paths - a list of string paths of the json files to be used to construct the domains.
         @param client - OpenAI client
         """
+        nltk.download('punkt', quiet=True)
+        nltk.download('stopwords', quiet=True)
+
         self.name = file_names
         self.vocab = set()
         self.client = client
         self.documents, self.sentence_embeddings = self.download(file_paths)
-        self.word_count = self.compute_total_word_count()
-        self.token_frequencies = self.compute_token_frequencies()
+        self.domain_words = [word for document in self.documents for word in document]
+        self.word_count = len(self.domain_words)
+        self.token_frequencies = Counter(self.domain_words)
         self.vocab_size = len(self.vocab)
         self.dataset_size = len(self.documents)
-        self.tfidf, self.tfidf_X = self.compute_tfidf()
+        self.tfidf_top_words = self.compute_tfidf()
+        self.prob_dist = self.get_prob_dist()
+        self.shannon_entropy = self.compute_shannon_entropy()
 
     def __str__(self):
         return f"""
@@ -73,51 +79,33 @@ class Domain:
         sentence_embeddings = []
         print(f"Processing {self.name} data.")
         for i in range(len(data)):
-            document = self.process_text(data[i])
+            document = self.get_article_vocab(data[i])
             domain_words.append(document)
             article = data[i]
             if len(article.split()) > 4000:
-                article =  ' '.join(article[:4000])
+                article =  ''.join(article[:4000])
             if self.client:
                 sentence_embeddings.append(self.compute_sentence_embeddings(article) )
         return domain_words, sentence_embeddings
 
-    def compute_total_word_count(self) -> int:
-        """
-        Compute word count in entire corpus.
-        @param self - this Domain class.
-        """
-        return sum([len(text) for text in self.documents])
 
-    def compute_token_frequencies(self) -> dict:
-        """
-        Compute relative token frequencies of across entire corpus.
-        @param self - this Domain class.
-        @returns - a dictionary of tokens mapped to frequencies.
-        """
-        frequencies = {}
-        for text in self.documents:
-            for word in text:
-                frequencies[word] = frequencies.get(word, 0) + 1 / self.word_count
-        return frequencies
+    def get_article_vocab(self, text: str) -> list:
 
-    def process_text(self, text: str) -> list:
-        """
-        Given string of text, remove special characters, capital letters, stopwords, lemmatize, and returns a list of words in order.
-        Adds all processed words to vocabulary set.
-        @param text - string containing any characters
-        @return - list of filtered words
-        """
-        processed = [
-            re.sub(r"[^a-zA-Z0-9\s]", "", string).lower() for string in text.split()
-        ]
-        processed = list(filter(lambda word: word not in STOP_WORDS, processed))
-        processed = [lemmatizer.lemmatize(word) for word in processed]
-        while "" in processed:
-            processed.remove("")
-        for word in processed:
-            self.vocab.add(word)
-        return processed
+        tokens = word_tokenize(str(text).lower())
+
+        # Remove special characters from each token
+        # tokens = set([re.sub('[^a-zA-Z0-9]+', '', _) for _ in tokens])
+        # Remove stopwords
+        stop_words = set(stopwords.words('english'))
+        special_characters = [",", ".", "(", ")", "'", "’", ";", ":", "!", "@", "#", "$", "%", "^", "&", "*", "-", "_",
+                              "+", "=", "[", "]", "}", "{", "<", ">", "/", "~", "``", "``", '\\']
+        tokens = [token for token in tokens if
+                  (token not in stop_words and token not in special_characters and token is not None)]
+
+        # Remove all numbers
+        # tokens = set(val for val in tokens if not val.isdigit())
+
+        return tokens
 
     def compute_tfidf(self):
         """
@@ -126,9 +114,13 @@ class Domain:
         @returns vectorizer, array - corresponding TFIDF vectorizor and vectorized array of documents
         """
         documents = [" ".join(text) for text in self.documents]
-        vectorizer = TfidfVectorizer(smooth_idf=True, use_idf=True, stop_words=None)
-        X = vectorizer.fit_transform(documents)
-        return vectorizer, X
+        tfidf_vectorizer = TfidfVectorizer(smooth_idf=True, use_idf=True, stop_words='english', max_df=0.95, min_df=2,)
+        tfidf = tfidf_vectorizer.fit_transform(documents)
+        n_top = 1000
+        importance = np.argsort(np.asarray(tfidf.sum(axis=0)).ravel())[::-1]
+        tfidf_feature_names = np.array(tfidf_vectorizer.get_feature_names_out())
+        tfidf_top_words = tfidf_feature_names[importance[:n_top]]
+        return tfidf_top_words
 
     def compute_sentence_embeddings(self, text):
         """
@@ -138,9 +130,20 @@ class Domain:
         """
         response = (
             self.client.embeddings.create(
-                model="text-embedding-3-small", input=text, dimensions=32
+                model="text-embedding-3-small", input=text, dimensions=64,
             )
             .data[0]
             .embedding
         )
         return response
+    def get_prob_dist(self):
+        prob_dist = dict()
+        for word in self.token_frequencies:
+            prob_dist[word] = self.token_frequencies[word] / self.word_count
+        prob_dist = {k: v for k, v in sorted(prob_dist.items(), key=lambda item: item[1])}
+        return prob_dist
+
+    def compute_shannon_entropy(self):
+        prob_dist = list(self.prob_dist.values())
+        shannon = entropy(prob_dist)
+        return shannon
