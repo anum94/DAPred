@@ -19,12 +19,15 @@ baseline_feature_target = ['target_rouge1', 'target_rouge2', 'target_rougeL',
 baseline_feature_source = ['source_rouge1', 'source_rouge2', 'source_rougeL',
                            'source_vocab_overlap']
 
-domain_specific_features = ['learning_difficult', 'vocab-overlap', 'tf-df-overlap',
-                             'kl-divergence', 'js-divergence', 'contextual-overlap']
-
+domain_specific_features = ['learning_difficult', 'vocab-overlap',
+                             'kl-divergence', 'js-divergence',
+                             'tf-idf-overlap',
+                            'source_shannon_entropy','target_shannon_entropy'
+                            ]
 features_to_normalize = {'source': ['source_bert_precision', 'source_bert_recall', 'source_bert_f1', 'source_vocab_overlap',
                             'source_Relevance', 'source_Coherence', 'source_Consistency', 'source_Fluency'],
-                         'all': ['source_shannon_entropy','target_shannon_entropy', 'kl-divergence', 'js-divergence',] ,
+                         'all': ['source_shannon_entropy','target_shannon_entropy', 'kl-divergence', 'js-divergence',
+                                 'vocab-overlap', 'tf-idf-overlap'] ,
                          'target': ['target_vocab_overlap', 'target_Relevance', 'target_Coherence', 'target_Consistency',
                                     'target_Fluency', 'target_bert_precision', 'target_bert_recall', 'target_bert_f1']
                          }
@@ -61,6 +64,7 @@ def xgboost(X, y):
     print(f"Mean Squared Error: {mse:.2f}")
     print(f"Mean Absolute Error: {mae:.2f}")
     print(f"R^2 Score: {r2:.2f}")
+    return {'xgboost-mse': mse, 'xgboost-mae': mae, "xgboost-r2":r2}
 
 
 def linear_regression(X, y):
@@ -79,13 +83,16 @@ def linear_regression(X, y):
     # Evaluate the model
     mse = mean_squared_error(y_test, y_pred)
     r2 = r2_score(y_test, y_pred)
+    mae = mean_absolute_error(y_test, y_pred)
 
     print("Mean Squared Error (MSE):", mse)
+    print(f"Mean Absolute Error: {mae:.2f}")
     print("R² Score:", r2)
 
     # Optional: Display the coefficients
-    print("Coefficients:", ridge_reg.coef_)
-    print("Intercept:", ridge_reg.intercept_)
+    #print("Coefficients:", ridge_reg.coef_)
+    #print("Intercept:", ridge_reg.intercept_)
+    return {'LR-mse': mse, 'LR-mae': mae, "LR-r2": r2}
 
 def weighted_average(nums, weights):
   return sum(x * y for x, y in zip(nums, weights)) / sum(weights)
@@ -112,43 +119,75 @@ def derive_baseline_features(feature_path):
     df['weighted_y_source'] = weighted_y_source
     df['y_drop'] = y_drop
 
-    df = df.drop(baseline_feature_target + ['weighted_y_target', 'contextual-overlap'], axis=1)
-
-    df = df.sample(frac=1)
-
-    # Extract feature and target arrays
-    X, y = df.drop('y_drop', axis=1), df[['y_drop']]
-    return X, y
+    return df
 def NormalizeData(data):
     return (data - np.min(data)) / (np.max(data) - np.min(data))
 def normalize_features(df):
-        def norm(df, features_to_normalize, update_y = None, a = None):
-            for feature in features_to_normalize:
+    def norm(df, features_to_normalize, update_y = None, a = None):
+        for feature in features_to_normalize:
+            if feature in df.columns:
                 numbers = np.array(df[feature]).reshape((-1,1))
                 df[feature] = NormalizeData(numbers)
-            weighted_y_col = []
-            if a is not None:
-                for col in df.columns:
-                    if a in col:
-                        weighted_y_col.append(col)
+        weighted_y_col = []
+        if a is not None:
+            for col in df.columns:
+                if a in col:
+                    weighted_y_col.append(col)
 
-                # update weighted y
-                feature_weight = [1 / len(weighted_y_col)] * len(weighted_y_col)
+            # update weighted y
+            feature_weight = [1 / len(weighted_y_col)] * len(weighted_y_col)
 
-                df[update_y] = weighted_average_list((df[weighted_y_col]).values, feature_weight)
+            df[update_y] = weighted_average_list((df[weighted_y_col]).values, feature_weight)
 
-            return df
-
-        #print (df.columns)
-        # normalize all
-        df = norm(df, features_to_normalize['all'])
-        # normalize target
-        df = norm(df, features_to_normalize['target'], update_y= 'y_weighted_target', a = 'target_')
-        # normalize source
-        df = norm(df, features_to_normalize['source'], update_y='y_weighted_source', a= 'source_')
-        df['y_drop'] = df['y_weighted_source'] - df['y_weighted_target']
         return df
 
+    #print (df.columns)
+    # normalize all
+    df = norm(df, features_to_normalize['all'])
+    # normalize target
+    df = norm(df, features_to_normalize['target'], update_y= 'y_weighted_target', a = 'target_')
+    # normalize source
+    df = norm(df, features_to_normalize['source'], update_y='y_weighted_source', a= 'source_')
+    df['y_drop'] = df['y_weighted_source'] - df['y_weighted_target']
+    return df
+
+def run_regression(df:pd.DataFrame, mode:str):
+    if mode == "baseline-raw" or mode == 'baseline-norm':
+        print(mode)
+        features_to_drop = baseline_feature_target + ['weighted_y_target']
+    elif mode == 'all-raw' or mode == 'all-norm':
+        print (mode)
+        features_to_drop = ['y_weighted_target', 'target_bert_f1',  'target_rouge1', 'target_rouge2',
+                            'target_rougeL', 'target_vocab_overlap','target_Relevance', 'target_Coherence',
+                            'target_Consistency', 'target_Fluency','da-type','source', 'target',
+                            'target_fs_grounded', 'Unnamed: 0', 'learning_difficult',
+                            'target_bert_precision', 'target_bert_recall',
+                  ]
+    else:
+        print ("mode unknown. No Regression took place.")
+        return
+
+    df = df.drop(features_to_drop, axis=1)
+    df = df.sample(frac=1)
+    # Extract feature and target arrays
+    X, y = df.drop('y_drop', axis=1), df[['y_drop']]
+    # Extract text features
+    cats = X.select_dtypes(exclude=np.number).columns.tolist()
+
+    # Convert to Pandas category
+    for col in cats:
+        X[col] = X[col].astype('category')
+
+    print ("Predictions with XGBoost")
+    #xgboost_scores=  xgboost(X, y)
+    xgboost_scores = {'xgboost-mse': 0, 'xgboost-mae': 0, "xgboost-r2":0}
+
+    print ("Predictions with Linear Regression")
+    lr_scores = linear_regression(X, y)
+    lr_scores['features'] = mode
+
+    combined_scores = lr_scores.update(xgboost_scores)
+    return pd.DataFrame.from_dict(combined_scores)
 
 if __name__ == '__main__':
     load_dotenv()
@@ -167,88 +206,38 @@ if __name__ == '__main__':
                         default="overall_summary_ds_14_llama3.1_8b_zeroshot.xlsx")
 
     args = parser.parse_args()
-    features = construct_training_corpus(domains=args.domains, da_type=args.da_type,
-                                        template_path=args.template_path)
+    #features = construct_training_corpus(domains=args.domains, da_type=args.da_type,
+    #                                    template_path=args.template_path)
     #print(features.describe())
-    file_name = "training_features_ds_14_llama3.1_8b_zeroshot_10.xlsx"
+    file_name = "training_features_ds_14_llama3.1_8b_zeroshot_5.xlsx"
     #features.to_excel(file_name)
+
+    # 1) Prepare Baseline Features
+
+    # 1.1) Raw features
+    features_baseline = derive_baseline_features(file_name)
+    features_baseline['kl-divergence'] = features_baseline['js-divergence'] # remove later
+    features_baseline['contextual-overlap'] = features_baseline['js-divergence']  # remove later
+    scores_baseline_raw = run_regression(features_baseline, mode='baseline-raw')
+
+    # 1.2) Normalized features -> check if even needed
+    features_baseline_norm = normalize_features(features_baseline)
+    scores_baseline_norm = run_regression(features_baseline_norm, mode='baseline-norm')
+
+    # 2) Prepare normal features
+
+    # 2.1) Raw Features
     features = pd.read_excel(file_name)
+    features['kl-divergence'] = features['js-divergence'] # remove later
+    features['contextual-overlap'] = features['js-divergence'] # remove later
+    scores_all_raw = run_regression(features, mode='all-raw')
+
+    # 2.2) Normalized Features
     features_norm = normalize_features(features)
+    scores_all_norm = run_regression(features_norm, mode='all-norm')
 
-    features = features.drop(['y_weighted_target', 'target_bert_f1',
-                              'target_rouge1', 'target_rouge2', 'target_rougeL',
-                              'target_vocab_overlap',
-                              'target_Relevance',
-                              'target_Coherence',
-                              'target_Consistency',
-                              'target_Fluency',
-                              'da-type',
-                              'source',
-                              'target', 'learning_difficult',
-                            'target_fs_grounded', 'Unnamed: 0', 'learning_difficult',
-                              'target_bert_precision', 'target_bert_recall',
-                              ], axis=1)
-
-    features = features.sample(frac=1)
-
-    # Extract feature and target arrays
-    X, y = features.drop('y_drop', axis=1), features[['y_drop']]
-    # Extract text features
-    cats = X.select_dtypes(exclude=np.number).columns.tolist()
-
-    # Convert to Pandas category
-    for col in cats:
-        X[col] = X[col].astype('category')
-    # print (X.dtypes)
-
-    X_base, y_base = derive_baseline_features(file_name)
-    print ("Baseline xgboost")
-    xgboost(X_base,y_base)
-    print(" xgboost")
-
-    xgboost(X, y)
-    print("Baseline Regression model with only N-gram based features")
-    linear_regression(X_base, y_base)
-    print("Regression with model only all features")
-    linear_regression(X, y)
-
-    print ("With Features normalized")
-    features_norm = features_norm.drop(['y_weighted_target', 'target_bert_f1',
-                              'target_rouge1', 'target_rouge2', 'target_rougeL',
-                              'target_vocab_overlap',
-                              'target_Relevance',
-                              'target_Coherence',
-                              'target_Consistency',
-                              'target_Fluency',
-                              'da-type',
-                              'source',
-                              'target', 'learning_difficult',
-                              'target_fs_grounded', 'Unnamed: 0',
-                              'target_bert_precision', 'target_bert_recall',
-                              ], axis=1)
-
-    features_norm = features_norm.sample(frac=1)
-
-    # Extract feature and target arrays
-    X, y = features_norm.drop('y_drop', axis=1), features_norm[['y_drop']]
-    # Extract text features
-    cats = X.select_dtypes(exclude=np.number).columns.tolist()
-
-    # Convert to Pandas category
-    for col in cats:
-        X[col] = X[col].astype('category')
-    # print (X.dtypes)
-
-    X_base, y_base = derive_baseline_features(file_name)
-    print ("Baseline xgboost")
-    xgboost(X_base,y_base)
-    print(" xgboost")
-
-    xgboost(X, y)
-    print("Baseline Regression model with only N-gram based features")
-    linear_regression(X_base, y_base)
-    print("Regression with model only all features")
-    linear_regression(X, y)
+    pd_scores = pd.concat([scores_baseline_raw, scores_baseline_norm, scores_all_raw, scores_all_norm], axis = 0)
+    print (pd_scores)
 
 
 

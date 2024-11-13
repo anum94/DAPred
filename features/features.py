@@ -75,7 +75,7 @@ def get_domain_similarity_metrics(source:str, target:str, da:str, num_samples = 
 
     return {
     "vocab-overlap": ST.vocab_overlap,
-    "tf-df-overlap": ST.tf_idf_overlap,
+    "tf-idf-overlap": ST.tf_idf_overlap,
     "source_shannon_entropy": S.shannon_entropy,
     "target_shannon_entropy": T.shannon_entropy,
     "kl-divergence": ST.kl_divergence,
@@ -96,7 +96,7 @@ def get_features( da:str,source:str, target:str, task:str, task_scores)-> (List,
     features += list(domain_spec_features.values())
     feature_names += list(domain_spec_features.keys())
 
-    domain_similarity_features = get_domain_similarity_metrics(target, source,da,  num_samples = 10)
+    domain_similarity_features = get_domain_similarity_metrics(target, source,da,  num_samples = 5)
     features += list(domain_similarity_features.values())
     feature_names += list(domain_similarity_features.keys())
 

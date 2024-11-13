@@ -114,9 +114,9 @@ class Domain:
         @returns vectorizer, array - corresponding TFIDF vectorizor and vectorized array of documents
         """
         documents = [" ".join(text) for text in self.documents]
-        tfidf_vectorizer = TfidfVectorizer(smooth_idf=True, use_idf=True, stop_words='english', max_df=0.95, min_df=2,)
+        tfidf_vectorizer = TfidfVectorizer(smooth_idf=True, use_idf=True, stop_words='english',)# max_df=0.10, min_df=0.01,)
         tfidf = tfidf_vectorizer.fit_transform(documents)
-        n_top = 1000
+        n_top = 10000
         importance = np.argsort(np.asarray(tfidf.sum(axis=0)).ravel())[::-1]
         tfidf_feature_names = np.array(tfidf_vectorizer.get_feature_names_out())
         tfidf_top_words = tfidf_feature_names[importance[:n_top]]

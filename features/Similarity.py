@@ -120,7 +120,7 @@ class Similarity:
             target_embedding = target_embedding.reshape(1, -1)
 
         scores = cosine_similarity(source_embedding, target_embedding)
-        scores = np.mean(scores, axis = 0)
+        scores = np.mean(scores)
         return scores
 
 
@@ -132,12 +132,12 @@ class Similarity:
         s_updated_prob_dist = self.source.prob_dist
         for t_word in t_prob_dist_words:
             if t_word not in s_updated_prob_dist:
-                s_updated_prob_dist[t_word] = 0
+                s_updated_prob_dist[t_word] = sys.float_info.epsilon
 
         t_updated_prob_dist = self.target.prob_dist
         for s_word in s_prob_dist_words:
             if s_word not in t_updated_prob_dist:
-                t_updated_prob_dist[s_word] = 0
+                t_updated_prob_dist[s_word] = sys.float_info.epsilon
 
         s_updated_prob_dist = {k: v for k, v in sorted(s_updated_prob_dist.items(), key=lambda item: item[0])}
         t_updated_prob_dist = {k: v for k, v in sorted(t_updated_prob_dist.items(), key=lambda item: item[0])}
