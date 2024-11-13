@@ -125,8 +125,8 @@ class Similarity:
 
 
     def get_global_prob_distribution(self):
-        s_prob_dist_words = self.source.domain_words
-        t_prob_dist_words = self.target.domain_words
+        s_prob_dist_words = list(self.source.prob_dist.keys())
+        t_prob_dist_words = list(self.target.prob_dist.keys())
 
         # add the source distribution words to target, and target distribution work to course, to a have a global representation which is needed to compute kl divergence.
         s_updated_prob_dist = self.source.prob_dist

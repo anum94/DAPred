@@ -1,4 +1,7 @@
 import argparse
+import os.path
+from os import mkdir
+from datetime import datetime
 import numpy as np
 import warnings
 import numpy as np
@@ -61,9 +64,9 @@ def xgboost(X, y):
     mae = mean_absolute_error(y_test, preds)
     r2 = r2_score(y_test, preds)
 
-    print(f"Mean Squared Error: {mse:.2f}")
-    print(f"Mean Absolute Error: {mae:.2f}")
-    print(f"R^2 Score: {r2:.2f}")
+    #print(f"Mean Squared Error: {mse:.2f}")
+    #print(f"Mean Absolute Error: {mae:.2f}")
+    #print(f"R^2 Score: {r2:.2f}")
     return {'xgboost-mse': mse, 'xgboost-mae': mae, "xgboost-r2":r2}
 
 
@@ -85,9 +88,9 @@ def linear_regression(X, y):
     r2 = r2_score(y_test, y_pred)
     mae = mean_absolute_error(y_test, y_pred)
 
-    print("Mean Squared Error (MSE):", mse)
-    print(f"Mean Absolute Error: {mae:.2f}")
-    print("R² Score:", r2)
+    #print("Mean Squared Error (MSE):", mse)
+    #print(f"Mean Absolute Error: {mae:.2f}")
+    #print("R² Score:", r2)
 
     # Optional: Display the coefficients
     #print("Coefficients:", ridge_reg.coef_)
@@ -104,8 +107,7 @@ def weighted_average_list(nums, weights):
   return results
 
 
-def derive_baseline_features(feature_path):
-    df = pd.read_excel(feature_path)
+def derive_baseline_features(df):
     df = df[domain_specific_features + baseline_feature_source + baseline_feature_target]
 
     feature_weight = [1 / len(baseline_feature_target)] * len(baseline_feature_target)
@@ -153,10 +155,10 @@ def normalize_features(df):
 
 def run_regression(df:pd.DataFrame, mode:str):
     if mode == "baseline-raw" or mode == 'baseline-norm':
-        print(mode)
+        #print(mode)
         features_to_drop = baseline_feature_target + ['weighted_y_target']
     elif mode == 'all-raw' or mode == 'all-norm':
-        print (mode)
+        #print (mode)
         features_to_drop = ['y_weighted_target', 'target_bert_f1',  'target_rouge1', 'target_rouge2',
                             'target_rougeL', 'target_vocab_overlap','target_Relevance', 'target_Coherence',
                             'target_Consistency', 'target_Fluency','da-type','source', 'target',
@@ -178,16 +180,19 @@ def run_regression(df:pd.DataFrame, mode:str):
     for col in cats:
         X[col] = X[col].astype('category')
 
-    print ("Predictions with XGBoost")
+    #print ("Predictions with XGBoost")
     #xgboost_scores=  xgboost(X, y)
     xgboost_scores = {'xgboost-mse': 0, 'xgboost-mae': 0, "xgboost-r2":0}
 
-    print ("Predictions with Linear Regression")
+    #print ("Predictions with Linear Regression")
     lr_scores = linear_regression(X, y)
-    lr_scores['features'] = mode
 
-    combined_scores = lr_scores.update(xgboost_scores)
-    return pd.DataFrame.from_dict(combined_scores)
+    lr_scores.update(xgboost_scores)
+    feature_score = {'features':mode}
+    feature_score.update(lr_scores)
+
+
+    return feature_score
 
 if __name__ == '__main__':
     load_dotenv()
@@ -206,38 +211,63 @@ if __name__ == '__main__':
                         default="overall_summary_ds_14_llama3.1_8b_zeroshot.xlsx")
 
     args = parser.parse_args()
-    #features = construct_training_corpus(domains=args.domains, da_type=args.da_type,
-    #                                    template_path=args.template_path)
-    #print(features.describe())
-    file_name = "training_features_ds_14_llama3.1_8b_zeroshot_5.xlsx"
-    #features.to_excel(file_name)
+    num_samples = 3
+    experiment = '0-shot'
 
-    # 1) Prepare Baseline Features
+    all_scores = None
+    date_time = '{date:%Y-%m-%d_%H-%M-%S}'.format(date=datetime.now())
+    directory = f"training_features/{date_time}"
 
-    # 1.1) Raw features
-    features_baseline = derive_baseline_features(file_name)
-    features_baseline['kl-divergence'] = features_baseline['js-divergence'] # remove later
-    features_baseline['contextual-overlap'] = features_baseline['js-divergence']  # remove later
-    scores_baseline_raw = run_regression(features_baseline, mode='baseline-raw')
+    for n in range(3,13,1):
+        features = construct_training_corpus(num_domains = n, da_type=args.da_type,
+                                            template_path=args.template_path, num_samples=num_samples)
 
-    # 1.2) Normalized features -> check if even needed
-    features_baseline_norm = normalize_features(features_baseline)
-    scores_baseline_norm = run_regression(features_baseline_norm, mode='baseline-norm')
+        if not os.path.exists(directory):
+            os.makedirs(directory)
 
-    # 2) Prepare normal features
+        file_name = f"training_features_ds_{n}_llama3.1_8b_{experiment}_samples{num_samples}.xlsx"
+        file_name = os.path.join(directory,file_name)
+        features.to_excel(file_name)
 
-    # 2.1) Raw Features
-    features = pd.read_excel(file_name)
-    features['kl-divergence'] = features['js-divergence'] # remove later
-    features['contextual-overlap'] = features['js-divergence'] # remove later
-    scores_all_raw = run_regression(features, mode='all-raw')
+        # 1) Prepare Baseline Features
 
-    # 2.2) Normalized Features
-    features_norm = normalize_features(features)
-    scores_all_norm = run_regression(features_norm, mode='all-norm')
+        # 1.1) Raw features
+        features_baseline = derive_baseline_features(features)
+        scores_baseline_raw = run_regression(features_baseline, mode='baseline-raw')
 
-    pd_scores = pd.concat([scores_baseline_raw, scores_baseline_norm, scores_all_raw, scores_all_norm], axis = 0)
-    print (pd_scores)
+        # 1.2) Normalized features -> check if even needed
+        features_baseline_norm = normalize_features(features_baseline)
+        scores_baseline_norm = run_regression(features_baseline_norm, mode='baseline-norm')
+
+        # 2) Prepare normal features
+
+        # 2.1) Raw Features
+        features = pd.read_excel(file_name)
+        scores_all_raw = run_regression(features, mode='all-raw')
+
+        # 2.2) Normalized Features
+        features_norm = normalize_features(features)
+        scores_all_norm = run_regression(features_norm, mode='all-norm')
+
+        pd_scores = pd.DataFrame.from_records([scores_baseline_raw, scores_baseline_norm, scores_all_raw, scores_all_norm])
+        pd_scores['num_datasets'] = [n] * len(pd_scores)
+        #print (pd_scores)
+        file_name = f"scores_ds_{n}_llama3.1_8b_{experiment}_{num_samples}.xlsx"
+        file_name = os.path.join(directory, file_name)
+        pd_scores.to_excel(file_name)
+        if all_scores is None:
+            all_scores = pd_scores
+            #print (pd_scores.columns)
+        else:
+            all_scores = pd.concat([all_scores, pd_scores], axis=0)
+
+    file_name = f"scores_llama3.1_8b_{experiment}_{num_samples}.xlsx"
+    file_name = os.path.join(directory, file_name)
+    all_scores = all_scores[['num_datasets', 'features', 'LR-mse', 'LR-mae', 'LR-r2', 'xgboost-mse', 'xgboost-mae',
+                             'xgboost-r2', ]]
+    all_scores.to_excel(file_name)
+
+
 
 
 

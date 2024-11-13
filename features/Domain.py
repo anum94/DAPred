@@ -11,6 +11,7 @@ import pandas as pd
 from sklearn.feature_extraction.text import (
     TfidfVectorizer,
 )
+from openai import OpenAI
 from rank_bm25 import BM25Okapi
 from nltk.stem import WordNetLemmatizer
 
@@ -26,7 +27,6 @@ class Domain:
     This class represents a dataset of text documents in a single domain.
     @field name - a string describing the domain.
     @field documents - a list of lists of words corresponding to each text in the domain.
-    @field client - OpenAI client
     @field vocab - a set of all words (containing no special characters, no stop words, and lemmatized) in this domain
     @field sentence_embeddings - list of sentence embeddings in each text
     @field word_count - total word count
@@ -36,24 +36,21 @@ class Domain:
     @field tfidf_topwords - TFIDD weighted top words
     """
 
-    def __init__(self, file_paths: list, file_names: list, client=None):
+    def __init__(self, documents: list, file_names: list):
         """
         Create a Domain.
         @param file_name - a string describing the domain.
         @param file_paths - a list of string paths of the json files to be used to construct the domains.
-        @param client - OpenAI client
         """
         nltk.download('punkt', quiet=True)
         nltk.download('stopwords', quiet=True)
 
         self.name = file_names
-        self.vocab = set()
-        self.client = client
-        self.documents, self.sentence_embeddings = self.download(file_paths)
-        self.domain_words = [word for document in self.documents for word in document]
+        self.documents = documents
+        documents_tokenized, self.sentence_embeddings = self.download(documents)
+        self.domain_words = [word for document in documents_tokenized for word in document]
         self.word_count = len(self.domain_words)
         self.token_frequencies = Counter(self.domain_words)
-        self.vocab_size = len(self.vocab)
         self.dataset_size = len(self.documents)
         self.tfidf_top_words = self.compute_tfidf()
         self.prob_dist = self.get_prob_dist()
@@ -64,7 +61,7 @@ class Domain:
                     ------- Domain Summary ------- \n
                     Dataset: {self.name}\n
                     Number of Documents: {self.dataset_size}\n
-                    Vocabulary Size: {self.vocab_size}\n
+                    
                     Total Word Count: {self.word_count}\n"""
 
     def download(self, data) -> tuple:
@@ -77,15 +74,14 @@ class Domain:
 
         domain_words = []
         sentence_embeddings = []
-        print(f"Processing {self.name} data.")
+        #print(f"Processing {self.name} data.")
         for i in range(len(data)):
             document = self.get_article_vocab(data[i])
             domain_words.append(document)
             article = data[i]
             if len(article.split()) > 4000:
                 article =  ''.join(article[:4000])
-            if self.client:
-                sentence_embeddings.append(self.compute_sentence_embeddings(article) )
+            sentence_embeddings.append(self.compute_sentence_embeddings(article) )
         return domain_words, sentence_embeddings
 
 
@@ -113,9 +109,8 @@ class Domain:
         @param self - this Domain class.
         @returns vectorizer, array - corresponding TFIDF vectorizor and vectorized array of documents
         """
-        documents = [" ".join(text) for text in self.documents]
         tfidf_vectorizer = TfidfVectorizer(smooth_idf=True, use_idf=True, stop_words='english',)# max_df=0.10, min_df=0.01,)
-        tfidf = tfidf_vectorizer.fit_transform(documents)
+        tfidf = tfidf_vectorizer.fit_transform(self.documents)
         n_top = 10000
         importance = np.argsort(np.asarray(tfidf.sum(axis=0)).ravel())[::-1]
         tfidf_feature_names = np.array(tfidf_vectorizer.get_feature_names_out())
@@ -128,8 +123,9 @@ class Domain:
         @param self - this Domain class.
         @returns array - vector embedding
         """
+        client = OpenAI()
         response = (
-            self.client.embeddings.create(
+            client.embeddings.create(
                 model="text-embedding-3-small", input=text, dimensions=64,
             )
             .data[0]

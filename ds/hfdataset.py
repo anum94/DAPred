@@ -35,7 +35,7 @@ class HFDataset:
             else:
                 data = load_dataset(ds_name, ds_subset, trust_remote_code=True)
 
-            print("DATASET_NAME:", ds_name)
+            #print("DATASET_NAME:", ds_name)
 
             if ds_name == "allenai/multi_lexsum":
                 data = self.combine_document_field(dataset=data)

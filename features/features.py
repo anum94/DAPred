@@ -1,31 +1,22 @@
 # Imports
+import gc
 import os.path
-import re
-import json
 import time
-import random
-
+from functools import lru_cache
 import numpy
 from tqdm import tqdm
-from nltk.corpus import stopwords
-from nltk.tokenize import word_tokenize
-import argparse
+import functools
 import nltk
+
 nltk.download('wordnet')
 from features.Domain import Domain
 from features.Similarity import Similarity
-from openai import OpenAI
-from dotenv import load_dotenv, find_dotenv
 from ds.supported import load_dataset
 from typing import List
 import pandas as pd
 from datetime import datetime
 import random
 import logging
-import itertools
-# Definitions
-
-
 
 def get_task_spec_metrics(domain:str, task:str, task_spec_metrics):
     task_spec_metrics = task_spec_metrics.drop(["dataset_name", "split"], axis = 1)
@@ -47,30 +38,41 @@ def get_task_spec_metrics(domain:str, task:str, task_spec_metrics):
 def get_domain_specific_metrics(domain:str):
     return {"learning_difficult": random.uniform(0, 1)}
 
-
-def get_domain_similarity_metrics(source:str, target:str, da:str, num_samples = 100):
-    s_dataset = load_dataset(
-            dataset=source,
+@lru_cache(maxsize=32)
+def get_domain(domain, split, num_samples = 5):
+    dataset = load_dataset(
+            dataset=domain,
             samples=num_samples,
         )
+
+    articles = dataset.get_split(split)['text']
+    if len(articles) > num_samples:
+        articles = articles[:num_samples]
+
+    d = Domain(articles, domain)
+    return d
+
+def get_domain_similarity_metrics(source:str, target:str, da:str, num_samples = 100):
     if source == target and da == "in-domain-adapt":
-
-        s_dval = s_dataset.get_split("train")['text']
+        source_split = 'train'
+        target_split = 'test'
+    elif source == target and da == "no-domain-adapt":
+        source_split = 'train'
+        target_split = 'train'
     else:
-        s_dval = s_dataset.get_split("test")['text']
-        s_dval = s_dval[:num_samples]
+        source_split = 'test'
+        target_split = 'test'
 
-    t_dataset = load_dataset(
-        dataset=target,
-        samples=num_samples,
-    )
-    t_dval = t_dataset.get_split("test")['text']
-    t_dval = t_dval[:num_samples]
+    #start = time.time()
+    S = get_domain(domain=source, split = source_split, num_samples=num_samples)
+    #end = time.time()
+    #print(f"{source} domain computation took {end - start}")
 
-    client = OpenAI()
+    #start = time.time()
+    T = get_domain(domain=target,split=target_split, num_samples=num_samples)
+    #end = time.time()
+    #print(f"{source} domain computation took {end - start}")
 
-    S = Domain(s_dval, source, client)
-    T = Domain(t_dval, target, client) #, unique=True)
     ST = Similarity(S, T)
 
     return {
@@ -85,7 +87,7 @@ def get_domain_similarity_metrics(source:str, target:str, da:str, num_samples = 
 
 def weighted_average(nums, weights):
   return sum(x * y for x, y in zip(nums, weights)) / sum(weights)
-def get_features( da:str,source:str, target:str, task:str, task_scores)-> (List,List):
+def get_features( da:str,source:str, target:str, task:str, task_scores, num_samples)-> (List,List):
     features = []
     feature_names = ['da-type', 'source', 'target',]
     features.append(da)
@@ -96,15 +98,19 @@ def get_features( da:str,source:str, target:str, task:str, task_scores)-> (List,
     features += list(domain_spec_features.values())
     feature_names += list(domain_spec_features.keys())
 
-    domain_similarity_features = get_domain_similarity_metrics(target, source,da,  num_samples = 5)
+    domain_similarity_features = get_domain_similarity_metrics(target, source,da,  num_samples = num_samples)
     features += list(domain_similarity_features.values())
     feature_names += list(domain_similarity_features.keys())
 
     try:
         if source == target and da == "in-domain-adapt":
-            source_task_scores = task_scores.loc[(task_scores['dataset_name'] == source) & (task_scores['split'] == 'train')]
+            split = 'test'
+        elif source == target and da == "no-domain-adapt":
+            split = 'train'
         else:
-            source_task_scores = task_scores.loc[(task_scores['dataset_name'] == source) & (task_scores['split'] == 'test')]
+            split = 'test'
+
+        source_task_scores = task_scores.loc[(task_scores['dataset_name'] == source) & (task_scores['split'] == split)]
     except:
         #todo: add a dummy variable for this
         print (f"Failed to get scores for domain {source} for {da} setting. Assigning dummy scores.")
@@ -131,13 +137,16 @@ def get_features( da:str,source:str, target:str, task:str, task_scores)-> (List,
 
     return features, feature_names
 
-def get_template(scores_path:str, domains, ) -> pd.DataFrame:
-
+def get_template(scores_path:str, num_domains = None, num_samples = 10) -> pd.DataFrame:
+    clear_cache()
     task_scores = pd.read_excel(scores_path,header=0)
     task_scores = task_scores.drop(['run_id', 'model', 'prompt'], axis = 1)
     domains = list(set(task_scores["dataset_name"]))
+    if num_domains is not None:
+        if len(domains) > num_domains:
+            domains = domains[:num_domains]
     task_scores = task_scores.drop(columns=task_scores.columns[:19])
-    da_type = ["in-domain-adapt", "single-domain-adapt", "no-domain-adapt"] #, "multi-domain-adapt"]
+    da_type = ["in-domain-adapt", "single-domain-adapt", "no-domain-adapt"]
     task = 'summarization'
     feature_names = ['dummy_feature_name'] * (len(task_scores.columns) - 1)
     df = pd.DataFrame()
@@ -147,7 +156,7 @@ def get_template(scores_path:str, domains, ) -> pd.DataFrame:
         features.append(da)
         if da == "in-domain-adapt" or da == "no-domain-adapt":
             for domain in tqdm(domains):
-                features, feature_names = get_features(da,domain,domain, task, task_scores)
+                features, feature_names = get_features(da,domain,domain, task, task_scores, num_samples)
                 if df.columns.empty:
                     df = pd.DataFrame(columns=feature_names)
                 df.loc[len(df)] = features
@@ -157,15 +166,25 @@ def get_template(scores_path:str, domains, ) -> pd.DataFrame:
                 domains_copy = domains.copy()
                 domains_copy.remove(source)
                 for target in domains_copy:
-                    features, feature_names = get_features(da, source, target, task, task_scores)
+                    features, feature_names = get_features(da, source, target, task, task_scores, num_samples)
                     if df.columns.empty:
                         df = pd.DataFrame(columns=feature_names)
                     df.loc[len(df)] = features
         else:
             df.loc[len(df)] = [numpy.NaN for i in range(len(feature_names))]
-
+    clear_cache()
     write_logs(df)
+
     return df
+def clear_cache():
+    gc.collect()
+    objects = [i for i in gc.get_objects()
+               if isinstance(i, functools._lru_cache_wrapper)]
+
+    # All objects cleared
+    for object in objects:
+        object.cache_clear()
+
 def write_logs(df:pd.DataFrame):
     date_time =  '{date:%Y-%m-%d_%H-%M-%S}'.format( date=datetime.now() )
     folder = os.path.join("logs",date_time)
@@ -173,33 +192,16 @@ def write_logs(df:pd.DataFrame):
     df.to_csv(os.path.join(folder,"features.csv"), index=False)
 
     print(f"Run logs would be locally stored at {folder}")
-def construct_training_corpus(domains: List, da_type: str = "in-domain-adapt",
+def construct_training_corpus(num_domains: int,  num_samples, da_type: str = "in-domain-adapt",
                               template_path: str = "template.xlsx") -> pd.DataFrame:
 
-    assert da_type in ["in-domain-adapt", "single-domain-adapt", "multi-domain-adapt"]
+    assert da_type in ["in-domain-adapt", "single-domain-adapt"]
 
-    template = get_template(template_path, domains = domains)
-    print (template)
+    template = get_template(template_path, num_domains = num_domains, num_samples = num_samples)
+    #print (template)
     return template
 
 
-if __name__ == '__main__':
-    load_dotenv()
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--da_type',
-                        type=str,
-                        default="in-domain-adapt")
-    parser.add_argument('--domain',
-                        dest="domains",
-                        action='append',
-                        default = ['arxiv', 'pubmed', 'govreport', 'wispermed'])
-
-    parser.add_argument('--template_path',
-                        type=str,
-                        default="template.xlsx")
-
-    args = parser.parse_args()
-    construct_training_corpus(domains=args.domains, da_type=args.da_type,template_path=args.template_path)
 
 
 
