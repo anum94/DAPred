@@ -138,7 +138,6 @@ def get_features( da:str,source:str, target:str, task:str, task_scores, num_samp
     return features, feature_names
 
 def get_template(scores_path:str, num_domains = None, num_samples = 10) -> pd.DataFrame:
-    clear_cache()
     task_scores = pd.read_excel(scores_path,header=0)
     task_scores = task_scores.drop(['run_id', 'model', 'prompt'], axis = 1)
     domains = list(set(task_scores["dataset_name"]))
@@ -172,18 +171,11 @@ def get_template(scores_path:str, num_domains = None, num_samples = 10) -> pd.Da
                     df.loc[len(df)] = features
         else:
             df.loc[len(df)] = [numpy.NaN for i in range(len(feature_names))]
-    clear_cache()
+    #clear_cache()
     write_logs(df)
 
     return df
-def clear_cache():
-    gc.collect()
-    objects = [i for i in gc.get_objects()
-               if isinstance(i, functools._lru_cache_wrapper)]
 
-    # All objects cleared
-    for object in objects:
-        object.cache_clear()
 
 def write_logs(df:pd.DataFrame):
     date_time =  '{date:%Y-%m-%d_%H-%M-%S}'.format( date=datetime.now() )

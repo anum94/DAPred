@@ -1,5 +1,6 @@
 import argparse
 import os.path
+import gc
 from os import mkdir
 from datetime import datetime
 import numpy as np
@@ -169,6 +170,7 @@ def run_regression(df:pd.DataFrame, mode:str):
         print ("mode unknown. No Regression took place.")
         return
 
+    df = df.dropna()
     df = df.drop(features_to_drop, axis=1)
     df = df.sample(frac=1)
     # Extract feature and target arrays
@@ -193,7 +195,14 @@ def run_regression(df:pd.DataFrame, mode:str):
 
 
     return feature_score
+def clear_cache():
+    gc.collect()
+    objects = [i for i in gc.get_objects()
+               if isinstance(i, functools._lru_cache_wrapper)]
 
+    # All objects cleared
+    for object in objects:
+        object.cache_clear()
 if __name__ == '__main__':
     load_dotenv()
     parser = argparse.ArgumentParser()
@@ -211,14 +220,14 @@ if __name__ == '__main__':
                         default="overall_summary_ds_14_llama3.1_8b_zeroshot.xlsx")
 
     args = parser.parse_args()
-    num_samples = 3
+    num_samples = 500
     experiment = '0-shot'
 
     all_scores = None
     date_time = '{date:%Y-%m-%d_%H-%M-%S}'.format(date=datetime.now())
     directory = f"training_features/{date_time}"
 
-    for n in range(3,13,1):
+    for n in range(10,14,1):
         features = construct_training_corpus(num_domains = n, da_type=args.da_type,
                                             template_path=args.template_path, num_samples=num_samples)
 
@@ -266,6 +275,7 @@ if __name__ == '__main__':
     all_scores = all_scores[['num_datasets', 'features', 'LR-mse', 'LR-mae', 'LR-r2', 'xgboost-mse', 'xgboost-mae',
                              'xgboost-r2', ]]
     all_scores.to_excel(file_name)
+clear_cache()
 
 
 

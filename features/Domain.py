@@ -126,7 +126,7 @@ class Domain:
         client = OpenAI()
         response = (
             client.embeddings.create(
-                model="text-embedding-3-small", input=text, dimensions=64,
+                model="text-embedding-3-small", input=text, dimensions=1024,
             )
             .data[0]
             .embedding
