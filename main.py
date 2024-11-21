@@ -46,7 +46,7 @@ def xgboost(X, y):
     # Define hyperparameters
     params = {"objective": "reg:squarederror", "tree_method": "gpu_hist"}
 
-    n = 30
+    n = 40
     evals = [(dtrain_reg, "train"), (dtest_reg, "validation")]
 
     model = xgb.train(
