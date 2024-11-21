@@ -254,7 +254,7 @@ if __name__ == '__main__':
     experiment = '0-shot'
     total_domains = 13
     minumum_domains = 3
-    cache = False
+    cache = True
 
     all_scores = None
     date_time = '{date:%Y-%m-%d_%H-%M-%S}'.format(date=datetime.now())
