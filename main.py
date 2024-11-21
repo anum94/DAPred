@@ -12,7 +12,7 @@ from sklearn.linear_model import Ridge
 import xgboost as xgb
 from sklearn.preprocessing import normalize
 from dotenv import load_dotenv
-
+import functools
 warnings.filterwarnings("ignore")
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 from features.features import construct_training_corpus
@@ -182,9 +182,9 @@ def run_regression(df:pd.DataFrame, mode:str):
     for col in cats:
         X[col] = X[col].astype('category')
 
-    #print ("Predictions with XGBoost")
-    #xgboost_scores=  xgboost(X, y)
-    xgboost_scores = {'xgboost-mse': 0, 'xgboost-mae': 0, "xgboost-r2":0}
+    print ("Predictions with XGBoost")
+    xgboost_scores=  xgboost(X, y)
+    #xgboost_scores = {'xgboost-mse': 0, 'xgboost-mae': 0, "xgboost-r2":0}
 
     #print ("Predictions with Linear Regression")
     lr_scores = linear_regression(X, y)
@@ -222,22 +222,31 @@ if __name__ == '__main__':
     args = parser.parse_args()
     num_samples = 500
     experiment = '0-shot'
+    total_domains = 13
+    minumum_domains = 3
+    cache = True
 
     all_scores = None
     date_time = '{date:%Y-%m-%d_%H-%M-%S}'.format(date=datetime.now())
     directory = f"training_features/{date_time}"
     cache_directory = "training_features/2024-11-14_11-39-15"
+    if cache:
+        directory = cache_directory
 
-    for n in range(3,14,1):
-        features = construct_training_corpus(num_domains = n, da_type=args.da_type,
-                                            template_path=args.template_path, num_samples=num_samples)
 
+    for n in range(minumum_domains,total_domains+1,1):
         if not os.path.exists(directory):
             os.makedirs(directory)
 
         file_name = f"training_features_ds_{n}_llama3.1_8b_{experiment}_samples{num_samples}.xlsx"
         file_name = os.path.join(directory,file_name)
-        features.to_excel(file_name)
+        if cache and os.path.isfile(file_name):
+            features = pd.read_excel(file_name)
+        else:
+            features = construct_training_corpus(num_domains = n, da_type=args.da_type,
+                                                template_path=args.template_path, num_samples=num_samples)
+
+            features.to_excel(file_name)
 
         # 1) Prepare Baseline Features
 
