@@ -1,25 +1,24 @@
 # Imports
-import re
 from collections import Counter
 
-from tqdm import tqdm
 import nltk
-from nltk.corpus import stopwords
-from nltk.tokenize import word_tokenize
 import numpy as np
-import pandas as pd
+import spacy
+from nltk.corpus import stopwords
+from nltk.stem import WordNetLemmatizer
+from nltk.tokenize import word_tokenize
+from openai import OpenAI
+from scipy.stats import entropy
 from sklearn.feature_extraction.text import (
     TfidfVectorizer,
 )
-from openai import OpenAI
-from rank_bm25 import BM25Okapi
-from nltk.stem import WordNetLemmatizer
 
-from scipy.stats import entropy
 # Definitions
 nltk.download("stopwords", quiet=True)
 STOP_WORDS = set(stopwords.words("english"))
 lemmatizer = WordNetLemmatizer()
+
+nlp = spacy.load("en_core_web_sm")
 
 
 class Domain:
@@ -42,13 +41,15 @@ class Domain:
         @param file_name - a string describing the domain.
         @param file_paths - a list of string paths of the json files to be used to construct the domains.
         """
-        nltk.download('punkt', quiet=True)
-        nltk.download('stopwords', quiet=True)
+        nltk.download("punkt", quiet=True)
+        nltk.download("stopwords", quiet=True)
 
         self.name = file_names
         self.documents = documents
         documents_tokenized, self.sentence_embeddings = self.download(documents)
-        self.domain_words = [word for document in documents_tokenized for word in document]
+        self.domain_words = [
+            word for document in documents_tokenized for word in document
+        ]
         self.word_count = len(self.domain_words)
         self.token_frequencies = Counter(self.domain_words)
         self.dataset_size = len(self.documents)
@@ -74,29 +75,65 @@ class Domain:
 
         domain_words = []
         sentence_embeddings = []
-        #print(f"Processing {self.name} data.")
+        # print(f"Processing {self.name} data.")
         for i in range(len(data)):
             document = self.get_article_vocab(data[i])
             domain_words.append(document)
             article = data[i]
             if len(article.split()) > 4000:
-                article =  ''.join(article[:4000])
-            sentence_embeddings.append(self.compute_sentence_embeddings(article) )
+                article = "".join(article[:4000])
+            sentence_embeddings.append(self.compute_sentence_embeddings(article))
         return domain_words, sentence_embeddings
 
-
     def get_article_vocab(self, text: str) -> list:
-
         tokens = word_tokenize(str(text).lower())
 
         # Remove special characters from each token
         # tokens = set([re.sub('[^a-zA-Z0-9]+', '', _) for _ in tokens])
         # Remove stopwords
-        stop_words = set(stopwords.words('english'))
-        special_characters = [",", ".", "(", ")", "'", "’", ";", ":", "!", "@", "#", "$", "%", "^", "&", "*", "-", "_",
-                              "+", "=", "[", "]", "}", "{", "<", ">", "/", "~", "``", "``", '\\']
-        tokens = [token for token in tokens if
-                  (token not in stop_words and token not in special_characters and token is not None)]
+        stop_words = set(stopwords.words("english"))
+        special_characters = [
+            ",",
+            ".",
+            "(",
+            ")",
+            "'",
+            "’",
+            ";",
+            ":",
+            "!",
+            "@",
+            "#",
+            "$",
+            "%",
+            "^",
+            "&",
+            "*",
+            "-",
+            "_",
+            "+",
+            "=",
+            "[",
+            "]",
+            "}",
+            "{",
+            "<",
+            ">",
+            "/",
+            "~",
+            "``",
+            "``",
+            "\\",
+        ]
+        tokens = [
+            token
+            for token in tokens
+            if (
+                token not in stop_words
+                and token not in special_characters
+                and token is not None
+            )
+        ]
 
         # Remove all numbers
         # tokens = set(val for val in tokens if not val.isdigit())
@@ -109,7 +146,11 @@ class Domain:
         @param self - this Domain class.
         @returns vectorizer, array - corresponding TFIDF vectorizor and vectorized array of documents
         """
-        tfidf_vectorizer = TfidfVectorizer(smooth_idf=True, use_idf=True, stop_words='english',)# max_df=0.10, min_df=0.01,)
+        tfidf_vectorizer = TfidfVectorizer(
+            smooth_idf=True,
+            use_idf=True,
+            stop_words="english",
+        )  # max_df=0.10, min_df=0.01,)
         tfidf = tfidf_vectorizer.fit_transform(self.documents)
         n_top = 10000
         importance = np.argsort(np.asarray(tfidf.sum(axis=0)).ravel())[::-1]
@@ -126,20 +167,75 @@ class Domain:
         client = OpenAI()
         response = (
             client.embeddings.create(
-                model="text-embedding-3-small", input=text, dimensions=1024,
+                model="text-embedding-3-small",
+                input=text,
+                dimensions=1024,
             )
             .data[0]
             .embedding
         )
         return response
+
     def get_prob_dist(self):
         prob_dist = dict()
         for word in self.token_frequencies:
             prob_dist[word] = self.token_frequencies[word] / self.word_count
-        prob_dist = {k: v for k, v in sorted(prob_dist.items(), key=lambda item: item[1])}
+        prob_dist = {
+            k: v for k, v in sorted(prob_dist.items(), key=lambda item: item[1])
+        }
         return prob_dist
 
     def compute_shannon_entropy(self):
         prob_dist = list(self.prob_dist.values())
         shannon = entropy(prob_dist)
         return shannon
+
+    def compute_learning_difficulty(self, alpha=0.7, beta=0.3, max_length=1000000):
+        # print("Documents:", self.documents)
+
+        def chunk_text(text, max_length):
+            """Divide a long text into smaller chunks based on max_length."""
+            for i in range(0, len(text), max_length):
+                yield text[i : i + max_length]
+
+        # Combine all text into one string
+        combined_text = " ".join(
+            text.strip() for text in self.documents if text.strip()
+        )
+
+        # Process text in chunks
+        total_dependency_length = 0
+        total_dependencies = 0
+        max_tree_depth = 0
+
+        for chunk in chunk_text(combined_text, max_length):
+            doc = nlp(chunk)
+
+            for sentence in doc.sents:
+                # Calculate dependency length
+                for token in sentence:
+                    dependency_length = abs(token.i - token.head.i)
+                    total_dependency_length += dependency_length
+                    total_dependencies += 1
+
+                # Calculate tree depth
+                def calculate_depth(token):
+                    if not list(token.children):
+                        return 1
+                    return 1 + max(calculate_depth(child) for child in token.children)
+
+                tree_depth = max(calculate_depth(token) for token in sentence)
+                max_tree_depth = max(max_tree_depth, tree_depth)
+
+        # Compute average dependency length
+        avg_dependency_length = (
+            total_dependency_length / total_dependencies
+            if total_dependencies > 0
+            else 0
+        )
+
+        # Calculate the combined syntactic learning difficulty score
+        syntactic_difficulty = alpha * avg_dependency_length + beta * max_tree_depth
+
+        # Return results
+        return syntactic_difficulty
