@@ -226,8 +226,9 @@ if __name__ == '__main__':
     all_scores = None
     date_time = '{date:%Y-%m-%d_%H-%M-%S}'.format(date=datetime.now())
     directory = f"training_features/{date_time}"
+    cache_directory = "training_features/2024-11-14_11-39-15"
 
-    for n in range(10,14,1):
+    for n in range(3,14,1):
         features = construct_training_corpus(num_domains = n, da_type=args.da_type,
                                             template_path=args.template_path, num_samples=num_samples)
 

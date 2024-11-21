@@ -3,20 +3,20 @@ from datasets.dataset_dict import DatasetDict
 from huggingface_hub import login
 login ("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")
 hf_repo_name = {
-    "wispermed": "anumafzal94/wispermed_10k_finetuning",
-    "bigpatent": "anumafzal94/bigpatent_10k_finetuning",
-    "pubmed": "anumafzal94/pubmed_10k_finetuning",
-    "cnndm": "anumafzal94/cnndm_10k_finetuning",
-    "samsum": "anumafzal94/samsum_10k_finetuning",
-    "billsum": "anumafzal94/billsum10k_finetuning",
-    "legalsum": "anumafzal94/legalsum_10k_finetuning",
-    "newsroom": "anumafzal94/newsroom_10k_finetuning",
-    "aclsum": "anumafzal94/aclsum_10k_finetuning",
-    "dialogsum": "anumafzal94/dialogsum_10k_finetuning",
-    "gigaword":"anumafzal94/gigaword_10k_finetuning",
-    "xlsum": "anumafzal94/xlsum_10k_finetuning",
-    "govreport": "anumafzal94/govreport_10k_finetuning",
-     "arxiv": "anumafzal94/arxiv_10k_finetuning",
+    "wispermed": "anumafzal94/wispermed_full_finetuning",
+    #"bigpatent": "anumafzal94/bigpatent_10k_finetuning",
+    #"pubmed": "anumafzal94/pubmed_10k_finetuning",
+    #"cnndm": "anumafzal94/cnndm_10k_finetuning",
+    #"samsum": "anumafzal94/samsum_10k_finetuning",
+    #"billsum": "anumafzal94/billsum10k_finetuning",
+    #"legalsum": "anumafzal94/legalsum_10k_finetuning",
+    #"newsroom": "anumafzal94/newsroom_10k_finetuning",
+    #"aclsum": "anumafzal94/aclsum_10k_finetuning",
+    #"dialogsum": "anumafzal94/dialogsum_10k_finetuning",
+    #"gigaword":"anumafzal94/gigaword_10k_finetuning",
+    #"xlsum": "anumafzal94/xlsum_10k_finetuning",
+    #"govreport": "anumafzal94/govreport_10k_finetuning",
+    # "arxiv": "anumafzal94/arxiv_10k_finetuning",
 
 }
 
@@ -29,7 +29,7 @@ def add_instruction(sample, _):
 for ds in hf_repo_name.keys():
     dataset = load_dataset(
         dataset=ds,
-        samples=10000,
+        samples=100000,
     )
     dataset_train = dataset.get_split("train")
     dataset_train =  dataset_train.map(add_instruction, dataset_train, batched=True)
