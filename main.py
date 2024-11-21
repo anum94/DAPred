@@ -250,7 +250,7 @@ if __name__ == '__main__':
                         default="overall_summary_ds_14_llama3.1_8b_zeroshot.xlsx")
 
     args = parser.parse_args()
-    num_samples = 100
+    num_samples = 500
     experiment = '0-shot'
     total_domains = 13
     minumum_domains = 3
