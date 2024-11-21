@@ -313,8 +313,8 @@ if __name__ == '__main__':
 
     file_name = f"scores_llama3.1_8b_{experiment}_{num_samples}.xlsx"
     file_name = os.path.join(directory, file_name)
-    all_scores = all_scores[['num_datasets', 'features', 'LR-mse', 'LR-mae', 'LR-r2', 'xgboost-mse', 'xgboost-mae',
-                             'xgboost-r2', ]]
+    all_scores = all_scores[['num_datasets', 'features', 'ridge-mse', 'ridge-mae', 'ridge-r2', 'lasso-mse',
+                             'lasso-mae','lasso-r2', 'xgboost-mse', 'xgboost-mae', 'xgboost-r2',  ]]
     all_scores.to_excel(file_name)
 clear_cache()
 
