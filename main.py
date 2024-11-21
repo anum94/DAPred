@@ -36,9 +36,8 @@ features_to_normalize = {'source': ['source_bert_precision', 'source_bert_recall
                          'target': ['target_vocab_overlap', 'target_Relevance', 'target_Coherence', 'target_Consistency',
                                     'target_Fluency', 'target_bert_precision', 'target_bert_recall', 'target_bert_f1']
                          }
-def xgboost(X, y):
-    # Split the data
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+def xgboost(X_train, X_test, y_train, y_test ):
+
     # Create regression matrices
     dtrain_reg = xgb.DMatrix(X_train, y_train, enable_categorical=True)
     dtest_reg = xgb.DMatrix(X_test, y_test, enable_categorical=True)
@@ -72,9 +71,8 @@ def xgboost(X, y):
     return {'xgboost-mse': mse, 'xgboost-mae': mae, "xgboost-rmse": rmse, "xgboost-r2":r2}
 
 
-def ridge_regression(X, y):
-    # Split the dataset into training and testing sets
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+def ridge_regression(X_train, X_test, y_train, y_test ):
+
 
     # Instantiate the Ridge Regression model
     ridge_reg = Ridge(alpha=1.0)  # You can change the alpha parameter to add more or less regularization
@@ -99,9 +97,7 @@ def ridge_regression(X, y):
     #print("Coefficients:", ridge_reg.coef_)
     #print("Intercept:", ridge_reg.intercept_)
     return {'ridge-mse': mse, 'ridge-mae': mae, "ridge-rmse": rmse, "ridge-r2": r2}
-def lasso_regression(X, y):
-    # Split the dataset into training and testing sets
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+def lasso_regression(X_train, X_test, y_train, y_test ):
 
     # Instantiate the Ridge Regression model
     lasso_reg = linear_model.Lasso(alpha=0.1)  # You can change the alpha parameter to add more or less regularization
@@ -192,7 +188,7 @@ def run_regression(df:pd.DataFrame, mode:str):
         features_to_drop = ['y_weighted_target', 'target_bert_f1',  'target_rouge1', 'target_rouge2',
                             'target_rougeL', 'target_vocab_overlap','target_Relevance', 'target_Coherence',
                             'target_Consistency', 'target_Fluency','da-type','source', 'target',
-                            'target_fs_grounded', 'Unnamed: 0', 'learning_difficult',
+                            'target_fs_grounded', 'Unnamed: 0',
                             'target_bert_precision', 'target_bert_recall',
                   ]
     else:
@@ -211,15 +207,17 @@ def run_regression(df:pd.DataFrame, mode:str):
     for col in cats:
         X[col] = X[col].astype('category')
 
+    # Split the dataset into training and testing sets
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
     print ("Predictions with XGBoost")
-    xgboost_scores=  xgboost(X, y)
-    #xgboost_scores = {'xgboost-mse': 0, 'xgboost-mae': 0, "xgboost-r2":0}
+    #xgboost_scores=  xgboost(X_train, X_test, y_train, y_test)
+    xgboost_scores = {'xgboost-mse': 0, 'xgboost-mae': 0, "xgboost-r2":0}
 
     print ("Predictions with Ridge Regression")
-    ridge_scores = ridge_regression(X, y)
+    ridge_scores = ridge_regression(X_train, X_test, y_train, y_test)
 
     print ("Predictions with Lasso Regression")
-    lasso_scores = lasso_regression(X, y)
+    lasso_scores = lasso_regression(X_train, X_test, y_train, y_test)
 
     ridge_scores.update(xgboost_scores)
     ridge_scores.update(lasso_scores)
@@ -252,11 +250,11 @@ if __name__ == '__main__':
                         default="overall_summary_ds_14_llama3.1_8b_zeroshot.xlsx")
 
     args = parser.parse_args()
-    num_samples = 500
+    num_samples = 100
     experiment = '0-shot'
     total_domains = 13
     minumum_domains = 3
-    cache = True
+    cache = False
 
     all_scores = None
     date_time = '{date:%Y-%m-%d_%H-%M-%S}'.format(date=datetime.now())
