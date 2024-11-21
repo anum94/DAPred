@@ -15,7 +15,7 @@ from sklearn.preprocessing import normalize
 from dotenv import load_dotenv
 import functools
 warnings.filterwarnings("ignore")
-from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
+from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score, root_mean_squared_error
 from features.features import construct_training_corpus
 
 baseline_feature_target = ['target_rouge1', 'target_rouge2', 'target_rougeL',
@@ -58,7 +58,7 @@ def xgboost(X, y):
     )
 
     preds = model.predict(dtest_reg)
-    rmse = mean_squared_error(y_test, preds, squared=True)
+    rmse = root_mean_squared_error(y_test, preds, squared=True)
     # print(f"RMSE of the base model: {rmse:.3f}")
 
     # Step 5: Evaluate the model's accuracy on the test set
@@ -69,7 +69,7 @@ def xgboost(X, y):
     #print(f"Mean Squared Error: {mse:.2f}")
     #print(f"Mean Absolute Error: {mae:.2f}")
     #print(f"R^2 Score: {r2:.2f}")
-    return {'xgboost-mse': mse, 'xgboost-mae': mae, "xgboost-r2":r2}
+    return {'xgboost-mse': mse, 'xgboost-mae': mae, "xgboost-rmse": rmse, "xgboost-r2":r2}
 
 
 def ridge_regression(X, y):
@@ -86,6 +86,7 @@ def ridge_regression(X, y):
     y_pred = ridge_reg.predict(X_test)
 
     # Evaluate the model
+    rmse = root_mean_squared_error(y_test, y_pred, squared=True)
     mse = mean_squared_error(y_test, y_pred)
     r2 = r2_score(y_test, y_pred)
     mae = mean_absolute_error(y_test, y_pred)
@@ -97,7 +98,7 @@ def ridge_regression(X, y):
     # Optional: Display the coefficients
     #print("Coefficients:", ridge_reg.coef_)
     #print("Intercept:", ridge_reg.intercept_)
-    return {'ridge-mse': mse, 'ridge-mae': mae, "ridge-r2": r2}
+    return {'ridge-mse': mse, 'ridge-mae': mae, "ridge-rmse": rmse, "ridge-r2": r2}
 def lasso_regression(X, y):
     # Split the dataset into training and testing sets
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
@@ -112,6 +113,7 @@ def lasso_regression(X, y):
     y_pred = lasso_reg.predict(X_test)
 
     # Evaluate the model
+    rmse = root_mean_squared_error(y_test, y_pred, squared=True)
     mse = mean_squared_error(y_test, y_pred)
     r2 = r2_score(y_test, y_pred)
     mae = mean_absolute_error(y_test, y_pred)
@@ -123,7 +125,7 @@ def lasso_regression(X, y):
     # Optional: Display the coefficients
     #print("Coefficients:", ridge_reg.coef_)
     #print("Intercept:", ridge_reg.intercept_)
-    return {'lasso-mse': mse, 'lasso-mae': mae, "lasso-r2": r2}
+    return {'lasso-mse': mse, 'lasso-mae': mae, "lasso-rmse": rmse, "lasso-r2": r2}
 
 def weighted_average(nums, weights):
   return sum(x * y for x, y in zip(nums, weights)) / sum(weights)
@@ -313,8 +315,9 @@ if __name__ == '__main__':
 
     file_name = f"scores_llama3.1_8b_{experiment}_{num_samples}.xlsx"
     file_name = os.path.join(directory, file_name)
-    all_scores = all_scores[['num_datasets', 'features', 'ridge-mse', 'ridge-mae', 'ridge-r2', 'lasso-mse',
-                             'lasso-mae','lasso-r2', 'xgboost-mse', 'xgboost-mae', 'xgboost-r2',  ]]
+    all_scores = all_scores[['num_datasets', 'features', 'ridge-mse', 'ridge-mae', "ridge-rmse", 'ridge-r2',
+                             'lasso-mse', 'lasso-mae', "lasso-rmse", 'lasso-r2', 'xgboost-mse', 'xgboost-mae',
+                             "xgboost-rmse", 'xgboost-r2',  ]]
     all_scores.to_excel(file_name)
 clear_cache()
 
