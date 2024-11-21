@@ -210,8 +210,8 @@ def run_regression(df:pd.DataFrame, mode:str):
     # Split the dataset into training and testing sets
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
     print ("Predictions with XGBoost")
-    #xgboost_scores=  xgboost(X_train, X_test, y_train, y_test)
-    xgboost_scores = {'xgboost-mse': 0, 'xgboost-mae': 0, "xgboost-r2":0}
+    xgboost_scores=  xgboost(X_train, X_test, y_train, y_test)
+    #xgboost_scores = {'xgboost-mse': 0, 'xgboost-mae': 0, "xgboost-r2":0}
 
     print ("Predictions with Ridge Regression")
     ridge_scores = ridge_regression(X_train, X_test, y_train, y_test)
