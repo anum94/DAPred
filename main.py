@@ -75,7 +75,7 @@ def ridge_regression(X_train, X_test, y_train, y_test ):
 
 
     # Instantiate the Ridge Regression model
-    ridge_reg = Ridge(alpha=1.0)  # You can change the alpha parameter to add more or less regularization
+    ridge_reg = Ridge(alpha=0.5)  # You can change the alpha parameter to add more or less regularization
 
     # Train the model
     ridge_reg.fit(X_train, y_train)
@@ -89,18 +89,18 @@ def ridge_regression(X_train, X_test, y_train, y_test ):
     r2 = r2_score(y_test, y_pred)
     mae = mean_absolute_error(y_test, y_pred)
 
-    #print("Mean Squared Error (MSE):", mse)
-    #print(f"Mean Absolute Error: {mae:.2f}")
-    #print("R² Score:", r2)
+    print("Mean Squared Error (MSE):", mse)
+    print(f"Mean Absolute Error: {mae:.2f}")
+    print("R² Score:", r2)
 
     # Optional: Display the coefficients
-    #print("Coefficients:", ridge_reg.coef_)
-    #print("Intercept:", ridge_reg.intercept_)
+    print("Coefficients:", ridge_reg.coef_)
+    print("Intercept:", ridge_reg.intercept_)
     return {'ridge-mse': mse, 'ridge-mae': mae, "ridge-rmse": rmse, "ridge-r2": r2}
 def lasso_regression(X_train, X_test, y_train, y_test ):
 
     # Instantiate the Ridge Regression model
-    lasso_reg = linear_model.Lasso(alpha=0.1)  # You can change the alpha parameter to add more or less regularization
+    lasso_reg = linear_model.Lasso(alpha=0.05)  # You can change the alpha parameter to add more or less regularization
 
     # Train the model
     lasso_reg.fit(X_train, y_train)
@@ -114,13 +114,13 @@ def lasso_regression(X_train, X_test, y_train, y_test ):
     r2 = r2_score(y_test, y_pred)
     mae = mean_absolute_error(y_test, y_pred)
 
-    #print("Mean Squared Error (MSE):", mse)
-    #print(f"Mean Absolute Error: {mae:.2f}")
-    #print("R² Score:", r2)
+    print("Mean Squared Error (MSE):", mse)
+    print(f"Mean Absolute Error: {mae:.2f}")
+    print("R² Score:", r2)
 
     # Optional: Display the coefficients
-    #print("Coefficients:", ridge_reg.coef_)
-    #print("Intercept:", ridge_reg.intercept_)
+    print("Coefficients:", lasso_reg.coef_)
+    print("Intercept:", lasso_reg.intercept_)
     return {'lasso-mse': mse, 'lasso-mae': mae, "lasso-rmse": rmse, "lasso-r2": r2}
 
 def weighted_average(nums, weights):
@@ -181,10 +181,10 @@ def normalize_features(df):
 
 def run_regression(df:pd.DataFrame, mode:str):
     if mode == "baseline-raw" or mode == 'baseline-norm':
-        #print(mode)
+        print(mode)
         features_to_drop = baseline_feature_target + ['weighted_y_target']
     elif mode == 'all-raw' or mode == 'all-norm':
-        #print (mode)
+        print (mode)
         features_to_drop = ['y_weighted_target', 'target_bert_f1',  'target_rouge1', 'target_rouge2',
                             'target_rougeL', 'target_vocab_overlap','target_Relevance', 'target_Coherence',
                             'target_Consistency', 'target_Fluency','da-type','source', 'target',
@@ -211,7 +211,7 @@ def run_regression(df:pd.DataFrame, mode:str):
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
     print ("Predictions with XGBoost")
     xgboost_scores=  xgboost(X_train, X_test, y_train, y_test)
-    #xgboost_scores = {'xgboost-mse': 0, 'xgboost-mae': 0, "xgboost-r2":0}
+    #xgboost_scores = {'xgboost-mse': 0, 'xgboost-mae': 0, "xgboost-rmse": 0, "xgboost-r2":0}
 
     print ("Predictions with Ridge Regression")
     ridge_scores = ridge_regression(X_train, X_test, y_train, y_test)
@@ -252,8 +252,8 @@ if __name__ == '__main__':
     args = parser.parse_args()
     num_samples = 500
     experiment = '0-shot'
-    total_domains = 13
-    minumum_domains = 3
+    total_domains = 3
+    minumum_domains = 13
     cache = True
 
     all_scores = None
@@ -283,6 +283,7 @@ if __name__ == '__main__':
 
         # 1.1) Raw features
         features_baseline = derive_baseline_features(features)
+        #print (f"Baseline Features: {features_baseline.columns}")
         scores_baseline_raw = run_regression(features_baseline, mode='baseline-raw')
 
         # 1.2) Normalized features -> check if even needed
@@ -293,6 +294,7 @@ if __name__ == '__main__':
 
         # 2.1) Raw Features
         features = pd.read_excel(file_name)
+        #print(f"All Features: {features.columns}")
         scores_all_raw = run_regression(features, mode='all-raw')
 
         # 2.2) Normalized Features
