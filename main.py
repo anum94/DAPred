@@ -2,6 +2,7 @@ import argparse
 import os.path
 import gc
 from os import mkdir
+from sklearn.linear_model import LinearRegression
 from sklearn import linear_model
 from datetime import datetime
 import numpy as np
@@ -68,7 +69,8 @@ def xgboost(X_train, X_test, y_train, y_test ):
     #print(f"Mean Squared Error: {mse:.2f}")
     #print(f"Mean Absolute Error: {mae:.2f}")
     #print(f"R^2 Score: {r2:.2f}")
-    return {'xgboost-mse': mse, 'xgboost-mae': mae, "xgboost-rmse": rmse, "xgboost-r2":r2}
+    return {'xgboost-mse': float(round(mse,2)), 'xgboost-mae': float(round(mae,2)),
+            "xgboost-rmse": float(round(rmse,2)), "xgboost-r2":float(round(r2,2))}
 
 
 def ridge_regression(X_train, X_test, y_train, y_test ):
@@ -89,14 +91,15 @@ def ridge_regression(X_train, X_test, y_train, y_test ):
     r2 = r2_score(y_test, y_pred)
     mae = mean_absolute_error(y_test, y_pred)
 
-    print("Mean Squared Error (MSE):", mse)
-    print(f"Mean Absolute Error: {mae:.2f}")
-    print("R² Score:", r2)
+    #print("Mean Squared Error (MSE):", mse)
+    #print(f"Mean Absolute Error: {mae:.2f}")
+    #print("R² Score:", r2)
 
     # Optional: Display the coefficients
-    print("Coefficients:", ridge_reg.coef_)
-    print("Intercept:", ridge_reg.intercept_)
-    return {'ridge-mse': mse, 'ridge-mae': mae, "ridge-rmse": rmse, "ridge-r2": r2}
+    #print("Coefficients:", ridge_reg.coef_)
+    #print("Intercept:", ridge_reg.intercept_)
+    return {'ridge-mse': float(round(mse,2)), 'ridge-mae': float(round(mae,2)),
+            "ridge-rmse": float(round(rmse,2)), "ridge-r2": float(round(r2,2))}
 def lasso_regression(X_train, X_test, y_train, y_test ):
 
     # Instantiate the Ridge Regression model
@@ -114,14 +117,42 @@ def lasso_regression(X_train, X_test, y_train, y_test ):
     r2 = r2_score(y_test, y_pred)
     mae = mean_absolute_error(y_test, y_pred)
 
-    print("Mean Squared Error (MSE):", mse)
-    print(f"Mean Absolute Error: {mae:.2f}")
-    print("R² Score:", r2)
+    #print("Mean Squared Error (MSE):", mse)
+    #print(f"Mean Absolute Error: {mae:.2f}")
+    #print("R² Score:", r2)
 
     # Optional: Display the coefficients
-    print("Coefficients:", lasso_reg.coef_)
-    print("Intercept:", lasso_reg.intercept_)
-    return {'lasso-mse': mse, 'lasso-mae': mae, "lasso-rmse": rmse, "lasso-r2": r2}
+    #print("Coefficients:", lasso_reg.coef_)
+    #print("Intercept:", lasso_reg.intercept_)
+    return {'lasso-mse': float(round(mse,2)), 'lasso-mae': float(round(mae,2)),
+            "lasso-rmse": float(round(rmse,2)), "lasso-r2": float(round(r2,2))}
+
+def linear_regression(X_train, X_test, y_train, y_test ):
+
+    # Instantiate the Ridge Regression model
+    reg = LinearRegression() # You can change the alpha parameter to add more or less regularization
+
+    # Train the model
+    reg.fit(X_train, y_train)
+
+    # Make predictions
+    y_pred = reg.predict(X_test)
+
+    # Evaluate the model
+    rmse = root_mean_squared_error(y_test, y_pred)
+    mse = mean_squared_error(y_test, y_pred)
+    r2 = r2_score(y_test, y_pred)
+    mae = mean_absolute_error(y_test, y_pred)
+
+    #print("Mean Squared Error (MSE):", mse)
+    #print(f"Mean Absolute Error: {mae:.2f}")
+    #print("R² Score:", r2)
+
+    # Optional: Display the coefficients
+    #print("Coefficients:", reg.coef_)
+    #print("Intercept:", reg.intercept_)
+    return {'mse': float(round(mse,2)), 'mae': float(round(mae,2)), "rmse": float(round(rmse,2)), "r2": float(round(r2,2))}
+
 
 def weighted_average(nums, weights):
   return sum(x * y for x, y in zip(nums, weights)) / sum(weights)
@@ -213,12 +244,15 @@ def run_regression(df:pd.DataFrame, mode:str):
     xgboost_scores=  xgboost(X_train, X_test, y_train, y_test)
     #xgboost_scores = {'xgboost-mse': 0, 'xgboost-mae': 0, "xgboost-rmse": 0, "xgboost-r2":0}
 
+    print("Predictions with Linear Regression")
+    reg_scores = linear_regression(X_train, X_test, y_train, y_test)
     print ("Predictions with Ridge Regression")
     ridge_scores = ridge_regression(X_train, X_test, y_train, y_test)
 
     print ("Predictions with Lasso Regression")
     lasso_scores = lasso_regression(X_train, X_test, y_train, y_test)
 
+    ridge_scores.update(reg_scores)
     ridge_scores.update(xgboost_scores)
     ridge_scores.update(lasso_scores)
     feature_score = {'features':mode}
@@ -252,8 +286,8 @@ if __name__ == '__main__':
     args = parser.parse_args()
     num_samples = 500
     experiment = '0-shot'
-    total_domains = 3
-    minumum_domains = 13
+    total_domains = 13
+    minumum_domains = 6
     cache = True
 
     all_scores = None
@@ -315,9 +349,9 @@ if __name__ == '__main__':
 
     file_name = f"scores_llama3.1_8b_{experiment}_{num_samples}.xlsx"
     file_name = os.path.join(directory, file_name)
-    all_scores = all_scores[['num_datasets', 'features', 'ridge-mse', 'ridge-mae', "ridge-rmse", 'ridge-r2',
-                             'lasso-mse', 'lasso-mae', "lasso-rmse", 'lasso-r2', 'xgboost-mse', 'xgboost-mae',
-                             "xgboost-rmse", 'xgboost-r2',  ]]
+    #all_scores = all_scores[['num_datasets', 'features', 'ridge-mse', 'ridge-mae', "ridge-rmse", 'ridge-r2',
+    #                         'lasso-mse', 'lasso-mae', "lasso-rmse", 'lasso-r2', 'xgboost-mse', 'xgboost-mae',
+    #                         "xgboost-rmse", 'xgboost-r2',  ]]
     all_scores.to_excel(file_name)
 clear_cache()
 
