@@ -2,6 +2,7 @@ import argparse
 import os.path
 import gc
 from os import mkdir
+from sklearn import linear_model
 from datetime import datetime
 import numpy as np
 import warnings
@@ -45,7 +46,7 @@ def xgboost(X, y):
     # Define hyperparameters
     params = {"objective": "reg:squarederror", "tree_method": "gpu_hist"}
 
-    n = 100
+    n = 30
     evals = [(dtrain_reg, "train"), (dtest_reg, "validation")]
 
     model = xgb.train(
@@ -71,7 +72,7 @@ def xgboost(X, y):
     return {'xgboost-mse': mse, 'xgboost-mae': mae, "xgboost-r2":r2}
 
 
-def linear_regression(X, y):
+def ridge_regression(X, y):
     # Split the dataset into training and testing sets
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
@@ -96,7 +97,33 @@ def linear_regression(X, y):
     # Optional: Display the coefficients
     #print("Coefficients:", ridge_reg.coef_)
     #print("Intercept:", ridge_reg.intercept_)
-    return {'LR-mse': mse, 'LR-mae': mae, "LR-r2": r2}
+    return {'ridge-mse': mse, 'ridge-mae': mae, "ridge-r2": r2}
+def lasso_regression(X, y):
+    # Split the dataset into training and testing sets
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+    # Instantiate the Ridge Regression model
+    lasso_reg = linear_model.Lasso(alpha=0.1)  # You can change the alpha parameter to add more or less regularization
+
+    # Train the model
+    lasso_reg.fit(X_train, y_train)
+
+    # Make predictions
+    y_pred = lasso_reg.predict(X_test)
+
+    # Evaluate the model
+    mse = mean_squared_error(y_test, y_pred)
+    r2 = r2_score(y_test, y_pred)
+    mae = mean_absolute_error(y_test, y_pred)
+
+    #print("Mean Squared Error (MSE):", mse)
+    #print(f"Mean Absolute Error: {mae:.2f}")
+    #print("R² Score:", r2)
+
+    # Optional: Display the coefficients
+    #print("Coefficients:", ridge_reg.coef_)
+    #print("Intercept:", ridge_reg.intercept_)
+    return {'lasso-mse': mse, 'lasso-mae': mae, "lasso-r2": r2}
 
 def weighted_average(nums, weights):
   return sum(x * y for x, y in zip(nums, weights)) / sum(weights)
@@ -186,13 +213,16 @@ def run_regression(df:pd.DataFrame, mode:str):
     xgboost_scores=  xgboost(X, y)
     #xgboost_scores = {'xgboost-mse': 0, 'xgboost-mae': 0, "xgboost-r2":0}
 
-    #print ("Predictions with Linear Regression")
-    lr_scores = linear_regression(X, y)
+    print ("Predictions with Ridge Regression")
+    ridge_scores = ridge_regression(X, y)
 
-    lr_scores.update(xgboost_scores)
+    print ("Predictions with Lasso Regression")
+    lasso_scores = lasso_regression(X, y)
+
+    ridge_scores.update(xgboost_scores)
+    ridge_scores.update(lasso_scores)
     feature_score = {'features':mode}
-    feature_score.update(lr_scores)
-
+    feature_score.update(ridge_scores)
 
     return feature_score
 def clear_cache():
@@ -235,6 +265,7 @@ if __name__ == '__main__':
 
 
     for n in range(minumum_domains,total_domains+1,1):
+        print(f"Number of domains: {n}")
         if not os.path.exists(directory):
             os.makedirs(directory)
 
