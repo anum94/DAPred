@@ -58,7 +58,7 @@ def xgboost(X, y):
     )
 
     preds = model.predict(dtest_reg)
-    rmse = root_mean_squared_error(y_test, preds, squared=True)
+    rmse = root_mean_squared_error(y_test, preds)
     # print(f"RMSE of the base model: {rmse:.3f}")
 
     # Step 5: Evaluate the model's accuracy on the test set
@@ -86,7 +86,7 @@ def ridge_regression(X, y):
     y_pred = ridge_reg.predict(X_test)
 
     # Evaluate the model
-    rmse = root_mean_squared_error(y_test, y_pred, squared=True)
+    rmse = root_mean_squared_error(y_test, y_pred)
     mse = mean_squared_error(y_test, y_pred)
     r2 = r2_score(y_test, y_pred)
     mae = mean_absolute_error(y_test, y_pred)
@@ -113,7 +113,7 @@ def lasso_regression(X, y):
     y_pred = lasso_reg.predict(X_test)
 
     # Evaluate the model
-    rmse = root_mean_squared_error(y_test, y_pred, squared=True)
+    rmse = root_mean_squared_error(y_test, y_pred)
     mse = mean_squared_error(y_test, y_pred)
     r2 = r2_score(y_test, y_pred)
     mae = mean_absolute_error(y_test, y_pred)
