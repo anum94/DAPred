@@ -1,3 +1,5 @@
 .env
 logs
 da-pred
+venv/
+*/__pycache__
