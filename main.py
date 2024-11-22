@@ -54,7 +54,7 @@ def xgboost(X_train, X_test, y_train, y_test ):
         dtrain=dtrain_reg,
         num_boost_round=n,
         evals=evals,
-        verbose_eval=2
+        verbose_eval=1
     )
 
     preds = model.predict(dtest_reg)
