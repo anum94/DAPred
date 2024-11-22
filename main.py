@@ -80,7 +80,7 @@ def ridge_regression(X_train, X_test, y_train, y_test ):
     ridge_reg = Ridge(alpha=0.5)  # You can change the alpha parameter to add more or less regularization
 
     # Train the model
-    ridge_reg.fit(X_train, y_train)
+    ridge_reg.fit(X_train, y_train, max_iter= epochs)
 
     # Make predictions
     y_pred = ridge_reg.predict(X_test)
@@ -98,15 +98,17 @@ def ridge_regression(X_train, X_test, y_train, y_test ):
     # Optional: Display the coefficients
     #print("Coefficients:", ridge_reg.coef_)
     #print("Intercept:", ridge_reg.intercept_)
-    return {'ridge-mse': float(round(mse,2)), 'ridge-mae': float(round(mae,2)),
+    scores = {'ridge-mse': float(round(mse,2)), 'ridge-mae': float(round(mae,2)),
             "ridge-rmse": float(round(rmse,2)), "ridge-r2": float(round(r2,2))}
+    print(scores)
+    return scores
 def lasso_regression(X_train, X_test, y_train, y_test ):
 
     # Instantiate the Ridge Regression model
     lasso_reg = linear_model.Lasso(alpha=0.05)  # You can change the alpha parameter to add more or less regularization
 
     # Train the model
-    lasso_reg.fit(X_train, y_train)
+    lasso_reg.fit(X_train, y_train, max_iter= epochs)
 
     # Make predictions
     y_pred = lasso_reg.predict(X_test)
@@ -124,8 +126,10 @@ def lasso_regression(X_train, X_test, y_train, y_test ):
     # Optional: Display the coefficients
     #print("Coefficients:", lasso_reg.coef_)
     #print("Intercept:", lasso_reg.intercept_)
-    return {'lasso-mse': float(round(mse,2)), 'lasso-mae': float(round(mae,2)),
+    scores = {'lasso-mse': float(round(mse,2)), 'lasso-mae': float(round(mae,2)),
             "lasso-rmse": float(round(rmse,2)), "lasso-r2": float(round(r2,2))}
+    print (scores)
+    return scores
 
 def linear_regression(X_train, X_test, y_train, y_test ):
 
@@ -133,7 +137,7 @@ def linear_regression(X_train, X_test, y_train, y_test ):
     reg = LinearRegression() # You can change the alpha parameter to add more or less regularization
 
     # Train the model
-    reg.fit(X_train, y_train)
+    reg.fit(X_train, y_train, max_iter= epochs)
 
     # Make predictions
     y_pred = reg.predict(X_test)
@@ -151,7 +155,9 @@ def linear_regression(X_train, X_test, y_train, y_test ):
     # Optional: Display the coefficients
     #print("Coefficients:", reg.coef_)
     #print("Intercept:", reg.intercept_)
-    return {'mse': float(round(mse,2)), 'mae': float(round(mae,2)), "rmse": float(round(rmse,2)), "r2": float(round(r2,2))}
+    scores = {'mse': float(round(mse,2)), 'mae': float(round(mae,2)), "rmse": float(round(rmse,2)), "r2": float(round(r2,2))}
+    print (scores)
+    return scores
 
 
 def weighted_average(nums, weights):
@@ -289,6 +295,7 @@ if __name__ == '__main__':
     total_domains = 13
     minumum_domains = 6
     cache = True
+    epochs = 20
 
     all_scores = None
     date_time = '{date:%Y-%m-%d_%H-%M-%S}'.format(date=datetime.now())
