@@ -395,6 +395,10 @@ if __name__ == '__main__':
         # 2.3) Reduced Feature Space
         features_norm_reduced = reduce_features(features_norm)
         scores_all_norm_red = run_regression(features_norm_reduced, mode='all-red')
+        file_name_norm = f"training_features_ds_{n}_llama3.1_8b_{experiment}_samples{num_samples}_red.xlsx"
+        file_name_norm = os.path.join(directory, file_name_norm)
+        if os.path.isfile(file_name_norm) == False:
+            features_norm.to_excel(file_name_norm)
 
 
         pd_scores = pd.DataFrame.from_records([scores_baseline_norm, scores_all_norm, scores_all_norm_red])
