@@ -341,6 +341,7 @@ if __name__ == '__main__':
         features_norm = normalize_features(features)
         scores_all_norm = run_regression(features_norm, mode='all-norm')
         file_name_norm = f"training_features_ds_{n}_llama3.1_8b_{experiment}_samples{num_samples}_norm.xlsx"
+        file_name_norm = os.path.join(directory, file_name_norm)
         if os.path.isfile(file_name_norm) == False:
             features_norm.to_excel(file_name_norm)
 
