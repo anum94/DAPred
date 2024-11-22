@@ -10,7 +10,7 @@ import warnings
 import numpy as np
 import pandas as pd
 from sklearn.model_selection import train_test_split
-from sklearn.linear_model import Ridge
+from sklearn.linear_model import Ridge, RidgeCV
 import xgboost as xgb
 from sklearn.preprocessing import normalize
 from dotenv import load_dotenv
@@ -91,10 +91,8 @@ def ridge_regression(X_train, X_test, y_train, y_test ):
 
 
     # Instantiate the Ridge Regression model
-    ridge_reg = Ridge(alpha=10)  # You can change the alpha parameter to add more or less regularization
+    ridge_reg = RidgeCV().fit(X_train, y_train) # You can change the alpha parameter to add more or less regularization
 
-    # Train the model
-    ridge_reg.fit(X_train, y_train)
 
     # Make predictions
     y_pred = ridge_reg.predict(X_test)
@@ -119,10 +117,9 @@ def ridge_regression(X_train, X_test, y_train, y_test ):
 def lasso_regression(X_train, X_test, y_train, y_test ):
 
     # Instantiate the Ridge Regression model
-    lasso_reg = linear_model.Lasso(alpha=0.95)  # You can change the alpha parameter to add more or less regularization
+    lasso_reg = linear_model.LassoCV().fit(X_train, y_train)  # You can change the alpha parameter to add more or less regularization
 
-    # Train the model
-    lasso_reg.fit(X_train, y_train)
+
 
     # Make predictions
     y_pred = lasso_reg.predict(X_test)
