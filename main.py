@@ -91,7 +91,7 @@ def ridge_regression(X_train, X_test, y_train, y_test ):
 
 
     # Instantiate the Ridge Regression model
-    ridge_reg = Ridge(alpha=0.5)  # You can change the alpha parameter to add more or less regularization
+    ridge_reg = Ridge(alpha=10)  # You can change the alpha parameter to add more or less regularization
 
     # Train the model
     ridge_reg.fit(X_train, y_train)
@@ -110,7 +110,7 @@ def ridge_regression(X_train, X_test, y_train, y_test ):
     #print("R² Score:", r2)
 
     # Optional: Display the coefficients
-    #print("Coefficients:", ridge_reg.coef_)
+    print("Coefficients:", ridge_reg.coef_)
     #print("Intercept:", ridge_reg.intercept_)
     scores = {'ridge-mse': float(round(mse,2)), 'ridge-mae': float(round(mae,2)),
             "ridge-rmse": float(round(rmse,2)), "ridge-r2": float(round(r2,2))}
@@ -119,7 +119,7 @@ def ridge_regression(X_train, X_test, y_train, y_test ):
 def lasso_regression(X_train, X_test, y_train, y_test ):
 
     # Instantiate the Ridge Regression model
-    lasso_reg = linear_model.Lasso(alpha=0.05)  # You can change the alpha parameter to add more or less regularization
+    lasso_reg = linear_model.Lasso(alpha=0.95)  # You can change the alpha parameter to add more or less regularization
 
     # Train the model
     lasso_reg.fit(X_train, y_train)
@@ -138,7 +138,7 @@ def lasso_regression(X_train, X_test, y_train, y_test ):
     #print("R² Score:", r2)
 
     # Optional: Display the coefficients
-    #print("Coefficients:", lasso_reg.coef_)
+    print("Coefficients:", lasso_reg.coef_)
     #print("Intercept:", lasso_reg.intercept_)
     scores = {'lasso-mse': float(round(mse,2)), 'lasso-mae': float(round(mae,2)),
             "lasso-rmse": float(round(rmse,2)), "lasso-r2": float(round(r2,2))}
