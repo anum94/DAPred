@@ -37,6 +37,18 @@ features_to_normalize = {'source': ['source_bert_precision', 'source_bert_recall
                          'target': ['target_vocab_overlap', 'target_Relevance', 'target_Coherence', 'target_Consistency',
                                     'target_Fluency', 'target_bert_precision', 'target_bert_recall', 'target_bert_f1']
                          }
+reduced_features_target = {
+    'target_bert': ['target_bert_f1'],
+    'target_rouge': ['target_rouge1', 'target_rouge2', 'target_rougeL'],
+    'target_vocab_overlap_': ['target_vocab_overlap'],
+    'target_llm_eval': ['target_Relevance', 'target_Coherence', 'target_Consistency', 'target_Fluency'],
+    'target_fs_grounded_': ['target_fs_grounded']}
+reduced_features_source = {
+    'source_bert': ['source_bert_f1'],
+    'source_rouge': ['source_rouge1', 'source_rouge2', 'source_rougeL'],
+    'source_vocab_overlap_': ['source_vocab_overlap'],
+    'source_llm_eval': ['source_Relevance', 'source_Coherence', 'source_Consistency', 'source_Fluency'],
+    'source_fs_grounded_': ['source_fs_grounded']}
 def xgboost(X_train, X_test, y_train, y_test ):
 
     # Create regression matrices
@@ -210,24 +222,27 @@ def normalize_features(df):
     # normalize all
     df = norm(df, features_to_normalize['all'])
     # normalize target
-    df = norm(df, features_to_normalize['target'], update_y= 'y_weighted_target', a = 'target_')
+    df = norm(df, features_to_normalize['target'], update_y= 'weighted_y_target', a = 'target_')
     # normalize source
-    df = norm(df, features_to_normalize['source'], update_y='y_weighted_source', a= 'source_')
-    df['y_drop'] = df['y_weighted_source'] - df['y_weighted_target']
+    df = norm(df, features_to_normalize['source'], update_y='weighted_y_source', a= 'source_')
+    df['y_drop'] = df['weighted_y_source'] - df['weighted_y_target']
     return df
 
 def run_regression(df:pd.DataFrame, mode:str):
     if mode == "baseline-raw" or mode == 'baseline-norm':
         print(mode)
-        features_to_drop = baseline_feature_target + ['weighted_y_target']
+        features_to_drop = baseline_feature_target + ['weighted_y_target', 'js-divergence', 'vocab-overlap',]
     elif mode == 'all-raw' or mode == 'all-norm':
         print (mode)
-        features_to_drop = ['y_weighted_target', 'target_bert_f1',  'target_rouge1', 'target_rouge2',
+        features_to_drop = ['weighted_y_target', 'target_bert_f1',  'target_rouge1', 'target_rouge2',
                             'target_rougeL', 'target_vocab_overlap','target_Relevance', 'target_Coherence',
                             'target_Consistency', 'target_Fluency','da-type','source', 'target',
-                            'target_fs_grounded', 'Unnamed: 0',
-                            'target_bert_precision', 'target_bert_recall',
+                            'target_fs_grounded', 'Unnamed: 0', 'js-divergence',
+                            'target_bert_precision', 'target_bert_recall', 'vocab-overlap',
                   ]
+    elif mode == 'all-red':
+        print (mode)
+        features_to_drop = ['weighted_y_target', 'js-divergence', 'vocab-overlap'] + list(reduced_features_target.keys())
     else:
         print ("mode unknown. No Regression took place.")
         return
@@ -247,8 +262,8 @@ def run_regression(df:pd.DataFrame, mode:str):
     # Split the dataset into training and testing sets
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
     print ("Predictions with XGBoost")
-    xgboost_scores =  xgboost(X_train, X_test, y_train, y_test)
-    #xgboost_scores = {'xgboost-mse': 0, 'xgboost-mae': 0, "xgboost-rmse": 0, "xgboost-r2":0}
+    #xgboost_scores =  xgboost(X_train, X_test, y_train, y_test)
+    xgboost_scores = {'xgboost-mse': 0, 'xgboost-mae': 0, "xgboost-rmse": 0, "xgboost-r2":0}
 
     print("Predictions with Linear Regression")
     reg_scores = linear_regression(X_train, X_test, y_train, y_test)
@@ -265,6 +280,38 @@ def run_regression(df:pd.DataFrame, mode:str):
     feature_score.update(ridge_scores)
 
     return feature_score
+
+def reduce_features(df):
+    len_before =  len(df.columns)
+    reduced_features_target_values = [v for value in reduced_features_target.values() for v in value]
+    reduced_features_source_values = [v for value in reduced_features_source.values() for v in value]
+
+
+    df = df[domain_specific_features + reduced_features_target_values + reduced_features_source_values]
+
+    for key, value in reduced_features_target.items():
+        df[key] = df[value].mean(axis = 1)
+
+    for key, value in reduced_features_source.items():
+        df[key] = df[value].mean(axis = 1)
+
+    df = df.drop(reduced_features_target_values + reduced_features_source_values, axis = 1)
+    num_features = len(reduced_features_target.keys())
+    feature_weight = [1 / num_features] * num_features
+
+    weighted_y_target = weighted_average_list((df[list(reduced_features_target.keys())]).values, feature_weight)
+    weighted_y_source = weighted_average_list(df[list(reduced_features_source.keys())].values, feature_weight)
+
+    y_drop = np.subtract(weighted_y_source, weighted_y_target)
+
+    df['weighted_y_target'] = weighted_y_target
+    df['weighted_y_source'] = weighted_y_source
+    df['y_drop'] = y_drop
+
+    len_after= len(df.columns)
+    print (f"Reduced features from {len_before} to {len_after}")
+    return df
+
 def clear_cache():
     gc.collect()
     objects = [i for i in gc.get_objects()
@@ -324,7 +371,7 @@ if __name__ == '__main__':
         # 1.1) Raw features
         features_baseline = derive_baseline_features(features)
         #print (f"Baseline Features: {features_baseline.columns}")
-        scores_baseline_raw = run_regression(features_baseline, mode='baseline-raw')
+        #scores_baseline_raw = run_regression(features_baseline, mode='baseline-raw')
 
         # 1.2) Normalized features -> check if even needed
         features_baseline_norm = normalize_features(features_baseline)
@@ -335,7 +382,7 @@ if __name__ == '__main__':
         # 2.1) Raw Features
         features = pd.read_excel(file_name)
         #print(f"All Features: {features.columns}")
-        scores_all_raw = run_regression(features, mode='all-raw')
+        #scores_all_raw = run_regression(features, mode='all-raw')
 
         # 2.2) Normalized Features
         features_norm = normalize_features(features)
@@ -345,7 +392,12 @@ if __name__ == '__main__':
         if os.path.isfile(file_name_norm) == False:
             features_norm.to_excel(file_name_norm)
 
-        pd_scores = pd.DataFrame.from_records([scores_baseline_raw, scores_baseline_norm, scores_all_raw, scores_all_norm])
+        # 2.3) Reduced Feature Space
+        features_norm_reduced = reduce_features(features_norm)
+        scores_all_norm_red = run_regression(features_norm_reduced, mode='all-red')
+
+
+        pd_scores = pd.DataFrame.from_records([scores_baseline_norm, scores_all_norm, scores_all_norm_red])
         pd_scores['num_datasets'] = [n] * len(pd_scores)
         #print (pd_scores)
         file_name = f"scores_ds_{n}_llama3.1_8b_{experiment}_{num_samples}.xlsx"
