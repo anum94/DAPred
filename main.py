@@ -33,7 +33,7 @@ domain_specific_features = ['learning_difficult', 'vocab-overlap',
 features_to_normalize = {'source': ['source_bert_precision', 'source_bert_recall', 'source_bert_f1', 'source_vocab_overlap',
                             'source_Relevance', 'source_Coherence', 'source_Consistency', 'source_Fluency'],
                          'all': ['source_shannon_entropy','target_shannon_entropy', 'kl-divergence', 'js-divergence',
-                                 'vocab-overlap', 'tf-idf-overlap'] ,
+                                 'vocab-overlap', 'tf-idf-overlap' , 'learning_difficult'] ,
                          'target': ['target_vocab_overlap', 'target_Relevance', 'target_Coherence', 'target_Consistency',
                                     'target_Fluency', 'target_bert_precision', 'target_bert_recall', 'target_bert_f1']
                          }
