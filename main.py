@@ -285,15 +285,15 @@ def run_regression(df:pd.DataFrame, mode:str):
     xgboost_scores =  xgboost(X_train, X_test, y_train, y_test)
     #xgboost_scores = {'xgboost-mse': 0, 'xgboost-mae': 0, "xgboost-rmse": 0, "xgboost-r2":0}
 
-    print("Predictions with Linear Regression")
-    reg_scores = linear_regression(X_train, X_test, y_train, y_test)
+    #print("Predictions with Linear Regression")
+    #reg_scores = linear_regression(X_train, X_test, y_train, y_test)
     print ("Predictions with Ridge Regression")
     ridge_scores = ridge_regression(X_train, X_test, y_train, y_test)
 
     print ("Predictions with Lasso Regression")
     lasso_scores = lasso_regression(X_train, X_test, y_train, y_test)
 
-    ridge_scores.update(reg_scores)
+    #ridge_scores.update(reg_scores)
     ridge_scores.update(xgboost_scores)
     ridge_scores.update(lasso_scores)
     feature_score = {'features':mode}
