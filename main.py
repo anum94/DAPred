@@ -293,9 +293,8 @@ if __name__ == '__main__':
     num_samples = 100
     experiment = '0-shot'
     total_domains = 13
-    minumum_domains = 6
+    minumum_domains = 3
     cache = True
-    epochs = 20
 
     all_scores = None
     date_time = '{date:%Y-%m-%d_%H-%M-%S}'.format(date=datetime.now())
