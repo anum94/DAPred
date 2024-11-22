@@ -202,6 +202,7 @@ def derive_baseline_features_red(df):
 def derive_baseline_features(df):
     df = df[domain_specific_features + baseline_feature_source + baseline_feature_target]
 
+    '''
     feature_weight = [1 / len(baseline_feature_target)] * len(baseline_feature_target)
 
     weighted_y_target = weighted_average_list((df[baseline_feature_target]).values, feature_weight)
@@ -212,6 +213,7 @@ def derive_baseline_features(df):
     df['weighted_y_target'] = weighted_y_target
     df['weighted_y_source'] = weighted_y_source
     df['y_drop'] = y_drop
+    '''
 
     return df
 def NormalizeData(data):
@@ -248,21 +250,21 @@ def normalize_features(df):
 def run_regression(df:pd.DataFrame, mode:str):
     if mode == "baseline-raw" or mode == 'baseline-norm':
         print(mode)
-        features_to_drop = baseline_feature_target + ['weighted_y_target', 'source_shannon_entropy', 'js-divergence', 'vocab-overlap',]
+        features_to_drop = baseline_feature_target + ['weighted_y_target','weighted_y_source', 'source_shannon_entropy', 'js-divergence', 'vocab-overlap',]
     elif mode == 'all-raw' or mode == 'all-norm':
         print (mode)
         features_to_drop = ['weighted_y_target', 'target_bert_f1',  'target_rouge1', 'target_rouge2',
                             'target_rougeL', 'target_vocab_overlap','target_Relevance', 'target_Coherence',
                             'target_Consistency', 'target_Fluency','da-type','source', 'target',
-                            'target_fs_grounded', 'Unnamed: 0', 'js-divergence',
+                            'target_fs_grounded', 'Unnamed: 0', 'js-divergence', 'weighted_y_source',
                             'target_bert_precision', 'target_bert_recall', 'vocab-overlap',  'source_shannon_entropy',
                   ]
     elif mode == 'all-red':
         print (mode)
-        features_to_drop = ['weighted_y_target', 'js-divergence', 'vocab-overlap', 'source_shannon_entropy'] + list(reduced_features_target.keys())
+        features_to_drop = ['weighted_y_target', 'js-divergence', 'vocab-overlap', 'weighted_y_source','source_shannon_entropy'] + list(reduced_features_target.keys())
     elif mode == 'baseline-norm-red':
         print (mode)
-        features_to_drop = ['weighted_y_target', 'js-divergence', 'vocab-overlap', 'source_shannon_entropy', 'rouge_target',]
+        features_to_drop = ['weighted_y_target', 'js-divergence', 'vocab-overlap', 'weighted_y_source','source_shannon_entropy', 'rouge_target',]
     else:
         print ("mode unknown. No Regression took place.")
         return
@@ -282,8 +284,8 @@ def run_regression(df:pd.DataFrame, mode:str):
     # Split the dataset into training and testing sets
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3,)
     print ("Predictions with XGBoost")
-    xgboost_scores =  xgboost(X_train, X_test, y_train, y_test)
-    #xgboost_scores = {'xgboost-mse': 0, 'xgboost-mae': 0, "xgboost-rmse": 0, "xgboost-r2":0}
+    #xgboost_scores =  xgboost(X_train, X_test, y_train, y_test)
+    xgboost_scores = {'xgboost-mse': 0, 'xgboost-mae': 0, "xgboost-rmse": 0, "xgboost-r2":0}
 
     #print("Predictions with Linear Regression")
     #reg_scores = linear_regression(X_train, X_test, y_train, y_test)
