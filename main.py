@@ -20,10 +20,12 @@ from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score, r
 from features.features import construct_training_corpus
 
 baseline_feature_target = ['target_rouge1', 'target_rouge2', 'target_rougeL',
-                           'target_vocab_overlap']
+                          # 'target_vocab_overlap'
+                           ]
 
 baseline_feature_source = ['source_rouge1', 'source_rouge2', 'source_rougeL',
-                           'source_vocab_overlap']
+                           #'source_vocab_overlap'
+                           ]
 
 domain_specific_features = ['learning_difficult', 'vocab-overlap',
                              'kl-divergence', 'js-divergence',
@@ -231,18 +233,18 @@ def normalize_features(df):
 def run_regression(df:pd.DataFrame, mode:str):
     if mode == "baseline-raw" or mode == 'baseline-norm':
         print(mode)
-        features_to_drop = baseline_feature_target + ['weighted_y_target', 'js-divergence', 'vocab-overlap',]
+        features_to_drop = baseline_feature_target + ['weighted_y_target', 'source_shannon_entropy', 'js-divergence', 'vocab-overlap',]
     elif mode == 'all-raw' or mode == 'all-norm':
         print (mode)
         features_to_drop = ['weighted_y_target', 'target_bert_f1',  'target_rouge1', 'target_rouge2',
                             'target_rougeL', 'target_vocab_overlap','target_Relevance', 'target_Coherence',
                             'target_Consistency', 'target_Fluency','da-type','source', 'target',
                             'target_fs_grounded', 'Unnamed: 0', 'js-divergence',
-                            'target_bert_precision', 'target_bert_recall', 'vocab-overlap',
+                            'target_bert_precision', 'target_bert_recall', 'vocab-overlap',  'source_shannon_entropy',
                   ]
     elif mode == 'all-red':
         print (mode)
-        features_to_drop = ['weighted_y_target', 'js-divergence', 'vocab-overlap'] + list(reduced_features_target.keys())
+        features_to_drop = ['weighted_y_target', 'js-divergence', 'vocab-overlap', 'source_shannon_entropy'] + list(reduced_features_target.keys())
     else:
         print ("mode unknown. No Regression took place.")
         return
@@ -281,7 +283,7 @@ def run_regression(df:pd.DataFrame, mode:str):
 
     return feature_score
 
-def reduce_features(df):
+def reduce_features_all(df):
     len_before =  len(df.columns)
     reduced_features_target_values = [v for value in reduced_features_target.values() for v in value]
     reduced_features_source_values = [v for value in reduced_features_source.values() for v in value]
@@ -393,7 +395,7 @@ if __name__ == '__main__':
             features_norm.to_excel(file_name_norm)
 
         # 2.3) Reduced Feature Space
-        features_norm_reduced = reduce_features(features_norm)
+        features_norm_reduced = reduce_features_all(features_norm)
         scores_all_norm_red = run_regression(features_norm_reduced, mode='all-red')
         file_name_norm = f"training_features_ds_{n}_llama3.1_8b_{experiment}_samples{num_samples}_red.xlsx"
         file_name_norm = os.path.join(directory, file_name_norm)
