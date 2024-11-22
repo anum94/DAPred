@@ -353,6 +353,7 @@ if __name__ == '__main__':
     #                         'lasso-mse', 'lasso-mae', "lasso-rmse", 'lasso-r2', 'xgboost-mse', 'xgboost-mae',
     #                         "xgboost-rmse", 'xgboost-r2',  ]]
     all_scores.to_excel(file_name)
+    print (f"final scores stored at: {file_name}")
 clear_cache()
 
 
