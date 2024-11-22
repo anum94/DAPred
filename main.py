@@ -241,7 +241,7 @@ def run_regression(df:pd.DataFrame, mode:str):
     # Split the dataset into training and testing sets
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
     print ("Predictions with XGBoost")
-    xgboost_scores=  xgboost(X_train, X_test, y_train, y_test)
+    xgboost_scores =  xgboost(X_train, X_test, y_train, y_test)
     #xgboost_scores = {'xgboost-mse': 0, 'xgboost-mae': 0, "xgboost-rmse": 0, "xgboost-r2":0}
 
     print("Predictions with Linear Regression")
@@ -284,7 +284,7 @@ if __name__ == '__main__':
                         default="overall_summary_ds_14_llama3.1_8b_zeroshot.xlsx")
 
     args = parser.parse_args()
-    num_samples = 500
+    num_samples = 100
     experiment = '0-shot'
     total_domains = 13
     minumum_domains = 6
@@ -293,7 +293,7 @@ if __name__ == '__main__':
     all_scores = None
     date_time = '{date:%Y-%m-%d_%H-%M-%S}'.format(date=datetime.now())
     directory = f"training_features/{date_time}"
-    cache_directory = "training_features/2024-11-14_11-39-15"
+    cache_directory = "training_features/2024-11-21_15-40-46"
     if cache:
         directory = cache_directory
 
