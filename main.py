@@ -46,7 +46,7 @@ def xgboost(X_train, X_test, y_train, y_test ):
     # Define hyperparameters
     params = {"objective": "reg:squarederror", "tree_method": "gpu_hist"}
 
-    n = 10
+    n = 8
     evals = [(dtrain_reg, "train"), (dtest_reg, "validation")]
 
     model = xgb.train(
@@ -80,7 +80,7 @@ def ridge_regression(X_train, X_test, y_train, y_test ):
     ridge_reg = Ridge(alpha=0.5)  # You can change the alpha parameter to add more or less regularization
 
     # Train the model
-    ridge_reg.fit(X_train, y_train, max_iter= epochs)
+    ridge_reg.fit(X_train, y_train)
 
     # Make predictions
     y_pred = ridge_reg.predict(X_test)
@@ -108,7 +108,7 @@ def lasso_regression(X_train, X_test, y_train, y_test ):
     lasso_reg = linear_model.Lasso(alpha=0.05)  # You can change the alpha parameter to add more or less regularization
 
     # Train the model
-    lasso_reg.fit(X_train, y_train, max_iter= epochs)
+    lasso_reg.fit(X_train, y_train)
 
     # Make predictions
     y_pred = lasso_reg.predict(X_test)
@@ -137,7 +137,7 @@ def linear_regression(X_train, X_test, y_train, y_test ):
     reg = LinearRegression() # You can change the alpha parameter to add more or less regularization
 
     # Train the model
-    reg.fit(X_train, y_train, max_iter= epochs)
+    reg.fit(X_train, y_train)
 
     # Make predictions
     y_pred = reg.predict(X_test)
