@@ -342,7 +342,7 @@ if __name__ == '__main__':
         scores_all_norm = run_regression(features_norm, mode='all-norm')
         file_name_norm = f"training_features_ds_{n}_llama3.1_8b_{experiment}_samples{num_samples}_norm.xlsx"
         if os.path.isfile(file_name_norm) == False:
-            scores_all_norm.to_excel(file_name_norm)
+            features_norm.to_excel(file_name_norm)
 
         pd_scores = pd.DataFrame.from_records([scores_baseline_raw, scores_baseline_norm, scores_all_raw, scores_all_norm])
         pd_scores['num_datasets'] = [n] * len(pd_scores)
