@@ -60,7 +60,7 @@ def xgboost(X_train, X_test, y_train, y_test ):
     # Define hyperparameters
     params = {"objective": "reg:squarederror", "tree_method": "gpu_hist"}
 
-    n = 8
+    n = 20
     evals = [(dtrain_reg, "train"), (dtest_reg, "validation")]
 
     model = xgb.train(
@@ -184,6 +184,24 @@ def weighted_average_list(nums, weights):
   return results
 
 
+def derive_baseline_features_red(df):
+    df = df[domain_specific_features + baseline_feature_source + baseline_feature_target]
+
+    df['rouge_target'] = df[baseline_feature_target].mean(axis=1)
+    df['rouge_source'] = df[baseline_feature_source].mean(axis=1)
+    df = df.drop(baseline_feature_source + baseline_feature_target, axis=1)
+
+    weighted_y_target = df['rouge_target']
+    weighted_y_source = df['rouge_source']
+
+    y_drop = np.subtract(weighted_y_source, weighted_y_target)
+
+    df['weighted_y_target'] = weighted_y_target
+    df['weighted_y_source'] = weighted_y_source
+    df['y_drop'] = y_drop
+
+    return df
+
 def derive_baseline_features(df):
     df = df[domain_specific_features + baseline_feature_source + baseline_feature_target]
 
@@ -245,6 +263,9 @@ def run_regression(df:pd.DataFrame, mode:str):
     elif mode == 'all-red':
         print (mode)
         features_to_drop = ['weighted_y_target', 'js-divergence', 'vocab-overlap', 'source_shannon_entropy'] + list(reduced_features_target.keys())
+    elif mode == 'baseline-norm-red':
+        print (mode)
+        features_to_drop = ['weighted_y_target', 'js-divergence', 'vocab-overlap', 'source_shannon_entropy', 'rouge_target',]
     else:
         print ("mode unknown. No Regression took place.")
         return
@@ -262,7 +283,7 @@ def run_regression(df:pd.DataFrame, mode:str):
         X[col] = X[col].astype('category')
 
     # Split the dataset into training and testing sets
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3,)
     print ("Predictions with XGBoost")
     xgboost_scores =  xgboost(X_train, X_test, y_train, y_test)
     #xgboost_scores = {'xgboost-mse': 0, 'xgboost-mae': 0, "xgboost-rmse": 0, "xgboost-r2":0}
@@ -379,6 +400,10 @@ if __name__ == '__main__':
         features_baseline_norm = normalize_features(features_baseline)
         scores_baseline_norm = run_regression(features_baseline_norm, mode='baseline-norm')
 
+        # 1.3) Normalized and reduced features
+        features_baseline_norm_red = derive_baseline_features_red(features_baseline_norm)
+        scores_baseline_norm_red = run_regression(features_baseline_norm_red, mode='baseline-norm-red')
+
         # 2) Prepare normal features
 
         # 2.1) Raw Features
@@ -403,7 +428,7 @@ if __name__ == '__main__':
             features_norm.to_excel(file_name_norm)
 
 
-        pd_scores = pd.DataFrame.from_records([scores_baseline_norm, scores_all_norm, scores_all_norm_red])
+        pd_scores = pd.DataFrame.from_records([scores_baseline_norm, scores_all_norm, scores_all_norm_red, scores_baseline_norm_red])
         pd_scores['num_datasets'] = [n] * len(pd_scores)
         #print (pd_scores)
         file_name = f"scores_ds_{n}_llama3.1_8b_{experiment}_{num_samples}.xlsx"
