@@ -287,15 +287,16 @@ def run_regression(df:pd.DataFrame, mode:str):
     xgboost_scores =  xgboost(X_train, X_test, y_train, y_test)
     #xgboost_scores = {'xgboost-mse': 0, 'xgboost-mae': 0, "xgboost-rmse": 0, "xgboost-r2":0}
 
-    #print("Predictions with Linear Regression")
-    #reg_scores = linear_regression(X_train, X_test, y_train, y_test)
+    print("Predictions with Linear Regression")
+    reg_scores = linear_regression(X_train, X_test, y_train, y_test)
+
     print ("Predictions with Ridge Regression")
     ridge_scores = ridge_regression(X_train, X_test, y_train, y_test)
 
     print ("Predictions with Lasso Regression")
     lasso_scores = lasso_regression(X_train, X_test, y_train, y_test)
 
-    #ridge_scores.update(reg_scores)
+    ridge_scores.update(reg_scores)
     ridge_scores.update(xgboost_scores)
     ridge_scores.update(lasso_scores)
     feature_score = {'features':mode}
@@ -400,8 +401,8 @@ if __name__ == '__main__':
         scores_baseline_norm = run_regression(features_baseline_norm, mode='baseline-norm')
 
         # 1.3) Normalized and reduced features
-        features_baseline_norm_red = derive_baseline_features_red(features_baseline_norm)
-        scores_baseline_norm_red = run_regression(features_baseline_norm_red, mode='baseline-norm-red')
+        #features_baseline_norm_red = derive_baseline_features_red(features_baseline_norm)
+        #scores_baseline_norm_red = run_regression(features_baseline_norm_red, mode='baseline-norm-red')
 
         # 2) Prepare normal features
 
@@ -426,8 +427,7 @@ if __name__ == '__main__':
         if os.path.isfile(file_name_norm) == False:
             features_norm.to_excel(file_name_norm)
 
-
-        pd_scores = pd.DataFrame.from_records([scores_baseline_norm, scores_all_norm, scores_all_norm_red, scores_baseline_norm_red])
+        pd_scores = pd.DataFrame.from_records([scores_baseline_norm, scores_all_norm, scores_all_norm_red])
         pd_scores['num_datasets'] = [n] * len(pd_scores)
         #print (pd_scores)
         file_name = f"scores_ds_{n}_llama3.1_8b_{experiment}_{num_samples}.xlsx"
