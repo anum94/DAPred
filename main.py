@@ -83,8 +83,8 @@ def xgboost(X_train, X_test, y_train, y_test ):
     #print(f"Mean Squared Error: {mse:.2f}")
     #print(f"Mean Absolute Error: {mae:.2f}")
     #print(f"R^2 Score: {r2:.2f}")
-    return {'xgboost-mse': float(round(mse,2)), 'xgboost-mae': float(round(mae,2)),
-            "xgboost-rmse": float(round(rmse,2)), "xgboost-r2":float(round(r2,2))}
+    return {'xgboost-mse': float(round(mse,3)), 'xgboost-mae': float(round(mae,3)),
+            "xgboost-rmse": float(round(rmse,3)), "xgboost-r2":float(round(r2,3))}
 
 
 def ridge_regression(X_train, X_test, y_train, y_test ):
@@ -110,8 +110,8 @@ def ridge_regression(X_train, X_test, y_train, y_test ):
     # Optional: Display the coefficients
     print("Coefficients:", ridge_reg.coef_)
     #print("Intercept:", ridge_reg.intercept_)
-    scores = {'ridge-mse': float(round(mse,2)), 'ridge-mae': float(round(mae,2)),
-            "ridge-rmse": float(round(rmse,2)), "ridge-r2": float(round(r2,2))}
+    scores = {'ridge-mse': float(round(mse,3)), 'ridge-mae': float(round(mae,3)),
+            "ridge-rmse": float(round(rmse,3)), "ridge-r2": float(round(r2,3))}
     print(scores)
     return scores
 def lasso_regression(X_train, X_test, y_train, y_test ):
@@ -137,8 +137,8 @@ def lasso_regression(X_train, X_test, y_train, y_test ):
     # Optional: Display the coefficients
     print("Coefficients:", lasso_reg.coef_)
     #print("Intercept:", lasso_reg.intercept_)
-    scores = {'lasso-mse': float(round(mse,2)), 'lasso-mae': float(round(mae,2)),
-            "lasso-rmse": float(round(rmse,2)), "lasso-r2": float(round(r2,2))}
+    scores = {'lasso-mse': float(round(mse,3)), 'lasso-mae': float(round(mae,3)),
+            "lasso-rmse": float(round(rmse,3)), "lasso-r2": float(round(r2,3))}
     print (scores)
     return scores
 
@@ -166,7 +166,7 @@ def linear_regression(X_train, X_test, y_train, y_test ):
     # Optional: Display the coefficients
     #print("Coefficients:", reg.coef_)
     #print("Intercept:", reg.intercept_)
-    scores = {'mse': float(round(mse,2)), 'mae': float(round(mae,2)), "rmse": float(round(rmse,2)), "r2": float(round(r2,2))}
+    scores = {'mse': float(round(mse,3)), 'mae': float(round(mae,3)), "rmse": float(round(rmse,3)), "r2": float(round(r2,3))}
     print (scores)
     return scores
 
