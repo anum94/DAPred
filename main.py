@@ -1,26 +1,29 @@
 import argparse
 import os.path
 import gc
-from os import mkdir
-from sklearn.linear_model import LinearRegression
+import math
 from sklearn import linear_model
 from datetime import datetime
-import numpy as np
 import warnings
-from sklearn.feature_selection import SelectKBest
-from sklearn.feature_selection import f_classif
-from sklearn.feature_selection import VarianceThreshold
 import numpy as np
 import pandas as pd
-from sklearn.model_selection import train_test_split
 from sklearn.linear_model import Ridge, RidgeCV
 import xgboost as xgb
-from sklearn.preprocessing import normalize
 from dotenv import load_dotenv
 import functools
 warnings.filterwarnings("ignore")
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score, root_mean_squared_error
 from features.features import construct_training_corpus
+
+# evaluation of a model using 10 features chosen with correlation
+from sklearn.datasets import make_regression
+from sklearn.model_selection import train_test_split
+from sklearn.feature_selection import SelectKBest
+from sklearn.feature_selection import f_regression
+from sklearn.linear_model import LinearRegression
+from sklearn.metrics import mean_absolute_error
+
+
 
 baseline_feature_target = ['target_rouge1', 'target_rouge2', 'target_rougeL',
                           # 'target_vocab_overlap'
@@ -116,11 +119,11 @@ def ridge_regression(X_train, X_test, y_train, y_test ):
     #print("R² Score:", r2)
 
     # Optional: Display the coefficients
-    print("Coefficients:", ridge_reg.coef_)
+    #print("Coefficients:", ridge_reg.coef_)
     #print("Intercept:", ridge_reg.intercept_)
     scores = {'ridge-mse': float(round(mse,3)), 'ridge-mae': float(round(mae,3)),
             "ridge-rmse": float(round(rmse,3)), "ridge-r2": float(round(r2,3))}
-    print(scores)
+    #print(scores)
     return scores
 def lasso_regression(X_train, X_test, y_train, y_test ):
 
@@ -143,11 +146,11 @@ def lasso_regression(X_train, X_test, y_train, y_test ):
     #print("R² Score:", r2)
 
     # Optional: Display the coefficients
-    print("Coefficients:", lasso_reg.coef_)
+    #print("Coefficients:", lasso_reg.coef_)
     #print("Intercept:", lasso_reg.intercept_)
     scores = {'lasso-mse': float(round(mse,3)), 'lasso-mae': float(round(mae,3)),
             "lasso-rmse": float(round(rmse,3)), "lasso-r2": float(round(r2,3))}
-    print (scores)
+    #print (scores)
     return scores
 
 def linear_regression(X_train, X_test, y_train, y_test ):
@@ -175,7 +178,7 @@ def linear_regression(X_train, X_test, y_train, y_test ):
     #print("Coefficients:", reg.coef_)
     #print("Intercept:", reg.intercept_)
     scores = {'mse': float(round(mse,3)), 'mae': float(round(mae,3)), "rmse": float(round(rmse,3)), "r2": float(round(r2,3))}
-    print (scores)
+    #print (scores)
     return scores
 
 
@@ -210,7 +213,7 @@ def derive_baseline_features_red(df):
 def derive_baseline_features(df):
     df = df[domain_specific_features + baseline_feature_source + baseline_feature_target]
 
-    '''
+
     feature_weight = [1 / len(baseline_feature_target)] * len(baseline_feature_target)
 
     weighted_y_target = weighted_average_list((df[baseline_feature_target]).values, feature_weight)
@@ -221,7 +224,6 @@ def derive_baseline_features(df):
     df['weighted_y_target'] = weighted_y_target
     df['weighted_y_source'] = weighted_y_source
     df['y_drop'] = y_drop
-    '''
 
     return df
 
@@ -230,7 +232,6 @@ def normalize_features(df):
         for feature in features_to_normalize:
             if feature in df.columns:
                 numbers = np.array(df[feature]).reshape((-1,1))
-                print (feature)
                 old_range_key = [key for key in normalize_range.keys() if key in feature][0]
                 df[feature] = np.interp(numbers, normalize_range[old_range_key], [0,1])
         weighted_y_col = []
@@ -255,14 +256,23 @@ def normalize_features(df):
     df = norm(df, features_to_normalize['source'], update_y='weighted_y_source', a= 'source_')
     df['y_drop'] = df['weighted_y_source'] - df['weighted_y_target']
     return df
-def feature_selection(X, y):
-    old_num = len(X.columns)
-    k = int(np.sqrt(len(X)))
-    X = SelectKBest(f_classif, k=k).fit_transform(X, y)
-    #sel = VarianceThreshold(threshold=(.8 * (1 - .8)))
-    #sel.fit_transform(X)
-    print (f"Reduced features from {old_num} to {len(X[0])}")
-    return X, y
+
+# feature selection
+def select_features(X, y):
+    feature_names = X.columns
+    k = int(math.sqrt(len(X)))
+    # configure to select a subset of features
+    fs = SelectKBest(score_func=f_regression, k=k)
+    # learn relationship from training data
+    fs.fit(X, y)
+    # what are scores for the features
+    for i in range(len(fs.scores_)):
+        print(f'Feature {feature_names[i]}%d: %f' % (i, fs.scores_[i]))
+    # transform train input data
+    X_train_fs = fs.transform(X)
+
+    print (f"Reduced features from {len(feature_names)} to {len(X_test_fs[0])}")
+    return X, fs
 
 def run_regression(df:pd.DataFrame, mode:str, feature_selection_bool:bool):
     if mode == "baseline-raw" or mode == 'baseline-norm':
@@ -300,7 +310,7 @@ def run_regression(df:pd.DataFrame, mode:str, feature_selection_bool:bool):
 
     # Split the dataset into training and testing sets
     if feature_selection_bool:
-        X, y = feature_selection(X, y)
+        X, y = select_features(X, y)
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3,)
     print ("Predictions with XGBoost")
     #xgboost_scores =  xgboost(X_train, X_test, y_train, y_test)
@@ -382,14 +392,14 @@ if __name__ == '__main__':
     num_samples = 100
     experiment = '0-shot'
     total_domains = 13
-    minumum_domains = 3
+    minumum_domains = 12
     cache = True
     sklearn_feature_selection = [True, False]
 
     all_scores = None
     date_time = '{date:%Y-%m-%d_%H-%M-%S}'.format(date=datetime.now())
     directory = f"training_features/{date_time}"
-    cache_directory = "training_features/2024-11-21_15-40-46"
+    cache_directory = "training_features/2024-11-24_00-35-21"
     if cache:
         directory = cache_directory
 
