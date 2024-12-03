@@ -386,15 +386,15 @@ if __name__ == '__main__':
 
     parser.add_argument('--template_path',
                         type=str,
-                        default="overall_summary_ds_14_llama3.1_8b_zeroshot.xlsx")
+                        default="inference_results/inference_results_ds_13_500_all.xlsx")
 
     args = parser.parse_args()
-    num_samples = 100
+    num_samples = 3
     experiment = '0-shot'
     total_domains = 13
-    minumum_domains = 12
-    cache = True
-    sklearn_feature_selection = [True, False]
+    minumum_domains = 4
+    cache = False
+    sklearn_feature_selection = [False]
 
     all_scores = None
     date_time = '{date:%Y-%m-%d_%H-%M-%S}'.format(date=datetime.now())

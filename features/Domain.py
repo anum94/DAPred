@@ -169,7 +169,7 @@ class Domain:
             client.embeddings.create(
                 model="text-embedding-3-small",
                 input=text,
-                dimensions=1024,
+                dimensions=32,#1024,
             )
             .data[0]
             .embedding
