@@ -7,6 +7,9 @@ from sklearn import linear_model
 from datetime import datetime
 import numpy as np
 import warnings
+from sklearn.feature_selection import SelectKBest
+from sklearn.feature_selection import f_classif
+from sklearn.feature_selection import VarianceThreshold
 import numpy as np
 import pandas as pd
 from sklearn.model_selection import train_test_split
@@ -252,8 +255,16 @@ def normalize_features(df):
     df = norm(df, features_to_normalize['source'], update_y='weighted_y_source', a= 'source_')
     df['y_drop'] = df['weighted_y_source'] - df['weighted_y_target']
     return df
+def feature_selection(X, y):
+    old_num = len(X.columns)
+    k = int(np.sqrt(len(X)))
+    X = SelectKBest(f_classif, k=k).fit_transform(X, y)
+    #sel = VarianceThreshold(threshold=(.8 * (1 - .8)))
+    #sel.fit_transform(X)
+    print (f"Reduced features from {old_num} to {len(X[0])}")
+    return X, y
 
-def run_regression(df:pd.DataFrame, mode:str):
+def run_regression(df:pd.DataFrame, mode:str, feature_selection_bool:bool):
     if mode == "baseline-raw" or mode == 'baseline-norm':
         print(mode)
         features_to_drop = baseline_feature_target + ['weighted_y_target','weighted_y_source', 'source_shannon_entropy', 'js-divergence', 'vocab-overlap',]
@@ -288,10 +299,12 @@ def run_regression(df:pd.DataFrame, mode:str):
         X[col] = X[col].astype('category')
 
     # Split the dataset into training and testing sets
+    if feature_selection_bool:
+        X, y = feature_selection(X, y)
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3,)
     print ("Predictions with XGBoost")
-    xgboost_scores =  xgboost(X_train, X_test, y_train, y_test)
-    #xgboost_scores = {'xgboost-mse': 0, 'xgboost-mae': 0, "xgboost-rmse": 0, "xgboost-r2":0}
+    #xgboost_scores =  xgboost(X_train, X_test, y_train, y_test)
+    xgboost_scores = {'xgboost-mse': 0, 'xgboost-mae': 0, "xgboost-rmse": 0, "xgboost-r2":0}
 
     print("Predictions with Linear Regression")
     reg_scores = linear_regression(X_train, X_test, y_train, y_test)
@@ -305,7 +318,7 @@ def run_regression(df:pd.DataFrame, mode:str):
     ridge_scores.update(reg_scores)
     ridge_scores.update(xgboost_scores)
     ridge_scores.update(lasso_scores)
-    feature_score = {'features':mode}
+    feature_score = {'features':mode, 'feature_selection': feature_selection_bool}
     feature_score.update(ridge_scores)
 
     return feature_score
@@ -371,6 +384,7 @@ if __name__ == '__main__':
     total_domains = 13
     minumum_domains = 3
     cache = True
+    sklearn_feature_selection = [True, False]
 
     all_scores = None
     date_time = '{date:%Y-%m-%d_%H-%M-%S}'.format(date=datetime.now())
@@ -379,79 +393,76 @@ if __name__ == '__main__':
     if cache:
         directory = cache_directory
 
+    for feat_selection in sklearn_feature_selection:
+        for n in range(minumum_domains,total_domains+1,1):
+            print(f"Number of domains: {n}")
+            if not os.path.exists(directory):
+                os.makedirs(directory)
 
-    for n in range(minumum_domains,total_domains+1,1):
-        print(f"Number of domains: {n}")
-        if not os.path.exists(directory):
-            os.makedirs(directory)
+            file_name = f"training_features_ds_{n}_llama3.1_8b_{experiment}_samples{num_samples}.xlsx"
+            file_name = os.path.join(directory,file_name)
+            if cache and os.path.isfile(file_name):
+                features = pd.read_excel(file_name)
+            else:
+                features = construct_training_corpus(num_domains = n, da_type=args.da_type,
+                                                    template_path=args.template_path, num_samples=num_samples)
 
-        file_name = f"training_features_ds_{n}_llama3.1_8b_{experiment}_samples{num_samples}.xlsx"
-        file_name = os.path.join(directory,file_name)
-        if cache and os.path.isfile(file_name):
+                features.to_excel(file_name)
+
+            # 1) Prepare Baseline Features
+
+            # 1.1) Raw features
+            features_baseline = derive_baseline_features(features)
+            #print (f"Baseline Features: {features_baseline.columns}")
+            #scores_baseline_raw = run_regression(features_baseline, mode='baseline-raw')
+
+            # 1.2) Normalized features -> check if even needed
+            features_baseline_norm = normalize_features(features_baseline)
+            scores_baseline_norm = run_regression(features_baseline_norm, mode='baseline-norm', feature_selection_bool=feat_selection)
+
+            # 1.3) Normalized and reduced features
+            #features_baseline_norm_red = derive_baseline_features_red(features_baseline_norm)
+            #scores_baseline_norm_red = run_regression(features_baseline_norm_red, mode='baseline-norm-red')
+
+            # 2) Prepare normal features
+
+            # 2.1) Raw Features
             features = pd.read_excel(file_name)
-        else:
-            features = construct_training_corpus(num_domains = n, da_type=args.da_type,
-                                                template_path=args.template_path, num_samples=num_samples)
+            #print(f"All Features: {features.columns}")
+            #scores_all_raw = run_regression(features, mode='all-raw')
 
-            features.to_excel(file_name)
+            # 2.2) Normalized Features
+            features_norm = normalize_features(features)
+            scores_all_norm = run_regression(features_norm, mode='all-norm', feature_selection_bool=feat_selection)
+            file_name_norm = f"training_features_ds_{n}_llama3.1_8b_{experiment}_samples{num_samples}_norm.xlsx"
+            file_name_norm = os.path.join(directory, file_name_norm)
+            if os.path.isfile(file_name_norm) == False:
+                features_norm.to_excel(file_name_norm)
 
-        # 1) Prepare Baseline Features
+            # 2.3) Reduced Feature Space
+            features_norm_reduced = reduce_features_all(features_norm)
+            scores_all_norm_red = run_regression(features_norm_reduced, mode='all-red', feature_selection_bool=feat_selection)
+            file_name_norm = f"training_features_ds_{n}_llama3.1_8b_{experiment}_samples{num_samples}_red.xlsx"
+            file_name_norm = os.path.join(directory, file_name_norm)
+            if os.path.isfile(file_name_norm) == False:
+                features_norm.to_excel(file_name_norm)
 
-        # 1.1) Raw features
-        features_baseline = derive_baseline_features(features)
-        #print (f"Baseline Features: {features_baseline.columns}")
-        #scores_baseline_raw = run_regression(features_baseline, mode='baseline-raw')
+            pd_scores = pd.DataFrame.from_records([scores_baseline_norm, scores_all_norm, scores_all_norm_red])
+            pd_scores['num_datasets'] = [n] * len(pd_scores)
+            #print (pd_scores)
+            file_name = f"scores_ds_{n}_llama3.1_8b_{experiment}_{num_samples}.xlsx"
+            file_name = os.path.join(directory, file_name)
+            pd_scores.to_excel(file_name)
+            if all_scores is None:
+                all_scores = pd_scores
+                #print (pd_scores.columns)
+            else:
+                all_scores = pd.concat([all_scores, pd_scores], axis=0)
 
-        # 1.2) Normalized features -> check if even needed
-        features_baseline_norm = normalize_features(features_baseline)
-        scores_baseline_norm = run_regression(features_baseline_norm, mode='baseline-norm')
-
-        # 1.3) Normalized and reduced features
-        #features_baseline_norm_red = derive_baseline_features_red(features_baseline_norm)
-        #scores_baseline_norm_red = run_regression(features_baseline_norm_red, mode='baseline-norm-red')
-
-        # 2) Prepare normal features
-
-        # 2.1) Raw Features
-        features = pd.read_excel(file_name)
-        #print(f"All Features: {features.columns}")
-        #scores_all_raw = run_regression(features, mode='all-raw')
-
-        # 2.2) Normalized Features
-        features_norm = normalize_features(features)
-        scores_all_norm = run_regression(features_norm, mode='all-norm')
-        file_name_norm = f"training_features_ds_{n}_llama3.1_8b_{experiment}_samples{num_samples}_norm.xlsx"
-        file_name_norm = os.path.join(directory, file_name_norm)
-        if os.path.isfile(file_name_norm) == False:
-            features_norm.to_excel(file_name_norm)
-
-        # 2.3) Reduced Feature Space
-        features_norm_reduced = reduce_features_all(features_norm)
-        scores_all_norm_red = run_regression(features_norm_reduced, mode='all-red')
-        file_name_norm = f"training_features_ds_{n}_llama3.1_8b_{experiment}_samples{num_samples}_red.xlsx"
-        file_name_norm = os.path.join(directory, file_name_norm)
-        if os.path.isfile(file_name_norm) == False:
-            features_norm.to_excel(file_name_norm)
-
-        pd_scores = pd.DataFrame.from_records([scores_baseline_norm, scores_all_norm, scores_all_norm_red])
-        pd_scores['num_datasets'] = [n] * len(pd_scores)
-        #print (pd_scores)
-        file_name = f"scores_ds_{n}_llama3.1_8b_{experiment}_{num_samples}.xlsx"
+        file_name = f"scores_llama3.1_8b_{experiment}_{num_samples}.xlsx"
         file_name = os.path.join(directory, file_name)
-        pd_scores.to_excel(file_name)
-        if all_scores is None:
-            all_scores = pd_scores
-            #print (pd_scores.columns)
-        else:
-            all_scores = pd.concat([all_scores, pd_scores], axis=0)
-
-    file_name = f"scores_llama3.1_8b_{experiment}_{num_samples}.xlsx"
-    file_name = os.path.join(directory, file_name)
-    #all_scores = all_scores[['num_datasets', 'features', 'ridge-mse', 'ridge-mae', "ridge-rmse", 'ridge-r2',
-    #                         'lasso-mse', 'lasso-mae', "lasso-rmse", 'lasso-r2', 'xgboost-mse', 'xgboost-mae',
-    #                         "xgboost-rmse", 'xgboost-r2',  ]]
-    all_scores.to_excel(file_name)
-    print (f"final scores stored at: {file_name}")
+        all_scores.to_excel(file_name)
+        print (f"final scores stored at: {file_name}")
 clear_cache()
 
 
