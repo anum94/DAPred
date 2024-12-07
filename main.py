@@ -261,18 +261,25 @@ def normalize_features(df):
 def select_features(X, y):
     feature_names = X.columns
     k = int(math.sqrt(len(X)))
-    # configure to select a subset of features
-    fs = SelectKBest(score_func=f_regression, k=k)
-    # learn relationship from training data
-    fs.fit(X, y)
-    # what are scores for the features
-    for i in range(len(fs.scores_)):
-        print(f'Feature {feature_names[i]}%d: %f' % (i, fs.scores_[i]))
-    # transform train input data
-    X_train_fs = fs.transform(X)
+    if k < len(feature_names)-1:
 
-    print (f"Reduced features from {len(feature_names)} to {len(X_test_fs[0])}")
-    return X, fs
+        # configure to select a subset of features
+        fs = SelectKBest(score_func=f_regression, k=k)
+        # learn relationship from training data
+        fs.fit(X, y)
+        cols_idxs = fs.get_support(indices=True)
+        features_df_new = X.iloc[:, cols_idxs]
+        # what are scores for the features
+        #for i in range(len(fs.scores_)):
+        #    print(f'Feature {feature_names[i]}%d: %f' % (i, fs.scores_[i]))
+        # transform train input data
+        X_train_fs = fs.transform(X)
+
+        print (f"Automatic Reduced features from {len(feature_names)} to {len(X_train_fs[0])}")
+    else:
+        X_train_fs = X
+        print ("No automatic feature reduction performed")
+    return X_train_fs, y
 
 def run_regression(df:pd.DataFrame, mode:str, feature_selection_bool:bool):
     if mode == "baseline-raw" or mode == 'baseline-norm':
@@ -280,18 +287,18 @@ def run_regression(df:pd.DataFrame, mode:str, feature_selection_bool:bool):
         features_to_drop = baseline_feature_target + ['weighted_y_target','weighted_y_source', 'source_shannon_entropy', 'js-divergence', 'vocab-overlap',]
     elif mode == 'all-raw' or mode == 'all-norm':
         print (mode)
-        features_to_drop = ['weighted_y_target', 'target_bert_f1',  'target_rouge1', 'target_rouge2',
+        features_to_drop = ['ft','weighted_y_target', 'target_bert_f1',  'target_rouge1', 'target_rouge2',
                             'target_rougeL', 'target_vocab_overlap','target_Relevance', 'target_Coherence',
                             'target_Consistency', 'target_Fluency','da-type','source', 'target',
-                            'target_fs_grounded', 'Unnamed: 0', 'js-divergence', 'weighted_y_source',
+                            'target_fs_grounded', 'Unnamed: 0', 'js-divergence', 'weighted_y_target', 'weighted_y_source',
                             'target_bert_precision', 'target_bert_recall', 'vocab-overlap',  'source_shannon_entropy',
                   ]
     elif mode == 'all-red':
         print (mode)
-        features_to_drop = ['weighted_y_target', 'js-divergence', 'vocab-overlap', 'weighted_y_source','source_shannon_entropy'] + list(reduced_features_target.keys())
+        features_to_drop = ['weighted_y_target', 'weighted_y_source', 'js-divergence', 'vocab-overlap','source_shannon_entropy'] + list(reduced_features_target.keys())
     elif mode == 'baseline-norm-red':
         print (mode)
-        features_to_drop = ['weighted_y_target', 'js-divergence', 'vocab-overlap', 'weighted_y_source','source_shannon_entropy', 'rouge_target',]
+        features_to_drop = ['weighted_y_target', 'weighted_y_source','js-divergence', 'vocab-overlap','source_shannon_entropy', 'rouge_target',]
     else:
         print ("mode unknown. No Regression took place.")
         return
@@ -313,7 +320,7 @@ def run_regression(df:pd.DataFrame, mode:str, feature_selection_bool:bool):
         X, y = select_features(X, y)
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3,)
     print ("Predictions with XGBoost")
-    #xgboost_scores =  xgboost(X_train, X_test, y_train, y_test)
+    xgboost_scores =  xgboost(X_train, X_test, y_train, y_test)
     xgboost_scores = {'xgboost-mse': 0, 'xgboost-mae': 0, "xgboost-rmse": 0, "xgboost-r2":0}
 
     print("Predictions with Linear Regression")
@@ -361,7 +368,7 @@ def reduce_features_all(df):
     df['y_drop'] = y_drop
 
     len_after= len(df.columns)
-    print (f"Reduced features from {len_before} to {len_after}")
+    print (f"Manually Reduced features from {len_before} to {len_after}")
     return df
 
 def clear_cache():
@@ -389,19 +396,27 @@ if __name__ == '__main__':
                         default="inference_results/inference_results_ds_13_500_all.xlsx")
 
     args = parser.parse_args()
-    num_samples = 3
-    experiment = '0-shot'
-    total_domains = 13
-    minumum_domains = 4
-    cache = False
-    sklearn_feature_selection = [False]
+    num_samples = 500
+    total_domains = 14
+    minumum_domains = 3
+    cache = True
+    sklearn_feature_selection = [False, True]
 
     all_scores = None
     date_time = '{date:%Y-%m-%d_%H-%M-%S}'.format(date=datetime.now())
     directory = f"training_features/{date_time}"
-    cache_directory = "training_features/2024-11-24_00-35-21"
+    cache_directory = "training_features/2024-12-06_00-04-14"
     if cache:
         directory = cache_directory
+    file_name = f"training_features_ds_14_llama3.1_8b_0-shot_samples{num_samples}.xlsx"
+    file_name = os.path.join(directory, file_name)
+    if cache and os.path.isfile(file_name):
+        all_features = pd.read_excel(file_name)
+    else:
+        all_features = construct_training_corpus(num_domains=n, da_type=args.da_type,
+                                                 template_path=args.template_path, num_samples=num_samples)
+
+        all_features.to_excel(file_name)
 
     for feat_selection in sklearn_feature_selection:
         for n in range(minumum_domains,total_domains+1,1):
@@ -409,16 +424,9 @@ if __name__ == '__main__':
             if not os.path.exists(directory):
                 os.makedirs(directory)
 
-            file_name = f"training_features_ds_{n}_llama3.1_8b_{experiment}_samples{num_samples}.xlsx"
-            file_name = os.path.join(directory,file_name)
-            if cache and os.path.isfile(file_name):
-                features = pd.read_excel(file_name)
-            else:
-                features = construct_training_corpus(num_domains = n, da_type=args.da_type,
-                                                    template_path=args.template_path, num_samples=num_samples)
 
-                features.to_excel(file_name)
-
+            domains_to_compute = (list(all_features['source'].unique()))[:n]
+            features = all_features.loc[all_features['source'].isin(domains_to_compute)]
             # 1) Prepare Baseline Features
 
             # 1.1) Raw features
@@ -437,30 +445,24 @@ if __name__ == '__main__':
             # 2) Prepare normal features
 
             # 2.1) Raw Features
-            features = pd.read_excel(file_name)
+            #features = pd.read_excel(file_name)
             #print(f"All Features: {features.columns}")
             #scores_all_raw = run_regression(features, mode='all-raw')
 
             # 2.2) Normalized Features
             features_norm = normalize_features(features)
             scores_all_norm = run_regression(features_norm, mode='all-norm', feature_selection_bool=feat_selection)
-            file_name_norm = f"training_features_ds_{n}_llama3.1_8b_{experiment}_samples{num_samples}_norm.xlsx"
-            file_name_norm = os.path.join(directory, file_name_norm)
-            if os.path.isfile(file_name_norm) == False:
-                features_norm.to_excel(file_name_norm)
+
 
             # 2.3) Reduced Feature Space
-            features_norm_reduced = reduce_features_all(features_norm)
-            scores_all_norm_red = run_regression(features_norm_reduced, mode='all-red', feature_selection_bool=feat_selection)
-            file_name_norm = f"training_features_ds_{n}_llama3.1_8b_{experiment}_samples{num_samples}_red.xlsx"
-            file_name_norm = os.path.join(directory, file_name_norm)
-            if os.path.isfile(file_name_norm) == False:
-                features_norm.to_excel(file_name_norm)
+            #features_norm_reduced = reduce_features_all(features_norm)
+            #scores_all_norm_red = run_regression(features_norm_reduced, mode='all-red', feature_selection_bool=feat_selection)
 
-            pd_scores = pd.DataFrame.from_records([scores_baseline_norm, scores_all_norm, scores_all_norm_red])
+
+            pd_scores = pd.DataFrame.from_records([scores_baseline_norm, scores_all_norm])
             pd_scores['num_datasets'] = [n] * len(pd_scores)
             #print (pd_scores)
-            file_name = f"scores_ds_{n}_llama3.1_8b_{experiment}_{num_samples}.xlsx"
+            file_name = f"scores_ds_{n}_llama3.1_8b_0-shot_{num_samples}.xlsx"
             file_name = os.path.join(directory, file_name)
             pd_scores.to_excel(file_name)
             if all_scores is None:
@@ -469,7 +471,7 @@ if __name__ == '__main__':
             else:
                 all_scores = pd.concat([all_scores, pd_scores], axis=0)
 
-        file_name = f"scores_llama3.1_8b_{experiment}_{num_samples}.xlsx"
+        file_name = f"scores_llama3.1_8b_0-shot_{num_samples}.xlsx"
         file_name = os.path.join(directory, file_name)
         all_scores.to_excel(file_name)
         print (f"final scores stored at: {file_name}")

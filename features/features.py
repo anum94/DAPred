@@ -13,7 +13,7 @@ from datetime import datetime
 from typing import List
 
 import pandas as pd
-
+import time
 from ds.supported import load_dataset
 from features.Domain import Domain
 from features.Similarity import Similarity
@@ -41,9 +41,11 @@ def get_domain_specific_metrics(domain: str, num_samples=100):
     d = get_domain(domain=domain, split="test",num_samples=num_samples )
     return {"learning_difficult": d.compute_learning_difficulty()}
 
-
-@lru_cache(maxsize=32)
-def get_domain(domain, split, num_samples=5):
+def get_ttl_hash(seconds=86400):
+    """Return the same value withing `seconds` time period"""
+    return round(time.time() / seconds)
+@lru_cache(maxsize=128)
+def get_domain(domain, split, num_samples=5, ttl_hash=None):
     dataset = load_dataset(
         dataset=domain,
         samples=num_samples,
@@ -69,16 +71,16 @@ def get_domain_similarity_metrics(source: str, target: str, da: str, num_samples
         target_split = "test"
 
     # start = time.time()
-    S = get_domain(domain=source, split=source_split, num_samples=num_samples)
+    S = get_domain(domain=source, split=source_split, num_samples=num_samples, ttl_hash=get_ttl_hash())
     # end = time.time()
     # print(f"{source} domain computation took {end - start}")
 
     # start = time.time()
-    T = get_domain(domain=target, split=target_split, num_samples=num_samples)
+    T = get_domain(domain=target, split=target_split, num_samples=num_samples, ttl_hash=get_ttl_hash())
     # end = time.time()
     # print(f"{source} domain computation took {end - start}")
 
-    ST = Similarity(S, T)
+    ST = Similarity(S, T, ttl_hash=get_ttl_hash())
 
     return {
         "vocab-overlap": ST.vocab_overlap,
@@ -183,10 +185,10 @@ def get_template(task_scores: pd.DataFrame, num_domains=None, num_samples=10, ft
 
 
     domains = list(set(task_scores["ds"]))
-    domains = ['arxiv', 'gigaword', 'wispermed', 'govreport']
-    #if num_domains is not None:
-    #    if len(domains) > num_domains:
-    #        domains = domains[:num_domains]
+    #domains = ['arxiv', 'gigaword', 'wispermed', 'govreport']
+    if num_domains is not None:
+        if len(domains) > num_domains:
+            domains = domains[:num_domains]
     #task_scores = task_scores.drop(columns=task_scores.columns[:19])
     da_type = ["in-domain-adapt", "single-domain-adapt", "no-domain-adapt"]
     task = "summarization"
@@ -243,13 +245,15 @@ def construct_training_corpus(
 
     df = pd.read_excel(template_path, header=0)
     df_zero_shot = df.loc[df['model'] == 'meta-llama-Meta-Llama-3.1-8B-Instruct-Turbo']
-    df_ft = df.loc[df['split'] == 'test']
+    df_ft = df.loc[(df['split'] == 'test') & (df['ds'] != 'aclsum')]
+
 
     template_2 = get_template(df_ft, num_domains=num_domains, num_samples=num_samples, ft = True
                               )
+    template_2.to_excel("template2_ft.xlsx")
     template_1 = get_template(df_zero_shot, num_domains=num_domains, num_samples=num_samples
     )
-
+    template_1.to_excel("template1.xlsx")
 
 
     # print (template)

@@ -169,7 +169,7 @@ class Domain:
             client.embeddings.create(
                 model="text-embedding-3-small",
                 input=text,
-                dimensions=32,#1024,
+                dimensions=1024,
             )
             .data[0]
             .embedding
@@ -190,7 +190,7 @@ class Domain:
         shannon = entropy(prob_dist)
         return shannon
 
-    def compute_learning_difficulty(self, alpha=0.7, beta=0.3, max_length=1000000):
+    def compute_learning_difficulty(self, alpha=0.7, beta=0.3, max_length=100000):
         # print("Documents:", self.documents)
 
         def chunk_text(text, max_length):

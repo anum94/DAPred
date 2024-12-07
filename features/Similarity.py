@@ -6,7 +6,7 @@ import numpy, scipy
 from sklearn.metrics.pairwise import cosine_similarity
 import sys
 from scipy.spatial.distance import jensenshannon
-
+from functools import lru_cache
 
 class Similarity:
     """
@@ -22,7 +22,8 @@ class Similarity:
     # TODO: Implement PAD, term familiarity clustering
     """
 
-    def __init__(self, source: Domain, target: Domain, client=None):
+    @lru_cache(maxsize=128)
+    def __init__(self, source: Domain, target: Domain, client=None, ttl_hash=None):
         """
         @param source - a Domain class
         @param target - a Domain class
