@@ -262,13 +262,13 @@ def select_features(X, y):
     feature_names = X.columns
     k = int(math.sqrt(len(X)))
     if k < len(feature_names)-1:
-
         # configure to select a subset of features
         fs = SelectKBest(score_func=f_regression, k=k)
         # learn relationship from training data
         fs.fit(X, y)
         cols_idxs = fs.get_support(indices=True)
-        features_df_new = X.iloc[:, cols_idxs]
+        features_df_new = list(X.iloc[:, cols_idxs].columns)
+
         # what are scores for the features
         #for i in range(len(fs.scores_)):
         #    print(f'Feature {feature_names[i]}%d: %f' % (i, fs.scores_[i]))
@@ -278,8 +278,9 @@ def select_features(X, y):
         print (f"Automatic Reduced features from {len(feature_names)} to {len(X_train_fs[0])}")
     else:
         X_train_fs = X
+        features_df_new = []
         print ("No automatic feature reduction performed")
-    return X_train_fs, y
+    return X_train_fs, y, features_df_new
 
 def run_regression(df:pd.DataFrame, mode:str, feature_selection_bool:bool):
     if mode == "baseline-raw" or mode == 'baseline-norm':
@@ -287,9 +288,9 @@ def run_regression(df:pd.DataFrame, mode:str, feature_selection_bool:bool):
         features_to_drop = baseline_feature_target + ['weighted_y_target','weighted_y_source', 'source_shannon_entropy', 'js-divergence', 'vocab-overlap',]
     elif mode == 'all-raw' or mode == 'all-norm':
         print (mode)
-        features_to_drop = ['ft','weighted_y_target', 'target_bert_f1',  'target_rouge1', 'target_rouge2',
-                            'target_rougeL', 'target_vocab_overlap','target_Relevance', 'target_Coherence',
-                            'target_Consistency', 'target_Fluency','da-type','source', 'target',
+        features_to_drop = ['ft','weighted_y_source','y_weighted_source', 'y_weighted_target', 'target_bert_f1',  'target_rouge1', 'target_rouge2',
+                            'target_rougeL', 'target_vocab_overlap','target_Relevance', 'target_Coherence', 'target_rougeLsum',
+                            'target_Consistency', 'target_Fluency','da-type','source', 'target', 'target_rouge_geometric_mean',
                             'target_fs_grounded', 'Unnamed: 0', 'js-divergence', 'weighted_y_target', 'weighted_y_source',
                             'target_bert_precision', 'target_bert_recall', 'vocab-overlap',  'source_shannon_entropy',
                   ]
@@ -316,12 +317,13 @@ def run_regression(df:pd.DataFrame, mode:str, feature_selection_bool:bool):
         X[col] = X[col].astype('category')
 
     # Split the dataset into training and testing sets
+    selected_features = []
     if feature_selection_bool:
-        X, y = select_features(X, y)
+        X, y, selected_features = select_features(X, y)
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3,)
     print ("Predictions with XGBoost")
-    xgboost_scores =  xgboost(X_train, X_test, y_train, y_test)
-    #xgboost_scores = {'xgboost-mse': 0, 'xgboost-mae': 0, "xgboost-rmse": 0, "xgboost-r2":0}
+    #xgboost_scores =  xgboost(X_train, X_test, y_train, y_test)
+    xgboost_scores = {'xgboost-mse': 0, 'xgboost-mae': 0, "xgboost-rmse": 0, "xgboost-r2":0}
 
     print("Predictions with Linear Regression")
     reg_scores = linear_regression(X_train, X_test, y_train, y_test)
@@ -338,7 +340,7 @@ def run_regression(df:pd.DataFrame, mode:str, feature_selection_bool:bool):
     feature_score = {'features':mode, 'feature_selection': feature_selection_bool}
     feature_score.update(ridge_scores)
 
-    return feature_score
+    return feature_score, selected_features
 
 def reduce_features_all(df):
     len_before =  len(df.columns)
@@ -400,7 +402,10 @@ if __name__ == '__main__':
     total_domains = 14
     minumum_domains = 3
     cache = True
-    sklearn_feature_selection = [False, True]
+    sklearn_feature_selection = [True, False]
+    selected_feat_rouge = []
+    selected_feat_all = []
+
 
     all_scores = None
     date_time = '{date:%Y-%m-%d_%H-%M-%S}'.format(date=datetime.now())
@@ -432,27 +437,28 @@ if __name__ == '__main__':
             # 1.1) Raw features
             features_baseline = derive_baseline_features(features)
             #print (f"Baseline Features: {features_baseline.columns}")
-            #scores_baseline_raw = run_regression(features_baseline, mode='baseline-raw')
+            #scores_baseline_raw , selected_feat= run_regression(features_baseline, mode='baseline-raw')
 
             # 1.2) Normalized features -> check if even needed
             features_baseline_norm = normalize_features(features_baseline)
-            scores_baseline_norm = run_regression(features_baseline_norm, mode='baseline-norm', feature_selection_bool=feat_selection)
+            scores_baseline_norm, selected_feat = run_regression(features_baseline_norm, mode='baseline-norm', feature_selection_bool=feat_selection)
+            selected_feat_rouge.extend(selected_feat )
 
             # 1.3) Normalized and reduced features
             #features_baseline_norm_red = derive_baseline_features_red(features_baseline_norm)
-            #scores_baseline_norm_red = run_regression(features_baseline_norm_red, mode='baseline-norm-red')
+            #scores_baseline_norm_red , selected_feat= run_regression(features_baseline_norm_red, mode='baseline-norm-red')
 
             # 2) Prepare normal features
 
             # 2.1) Raw Features
             #features = pd.read_excel(file_name)
             #print(f"All Features: {features.columns}")
-            #scores_all_raw = run_regression(features, mode='all-raw')
+            #scores_all_raw, selected_feat = run_regression(features, mode='all-raw')
 
             # 2.2) Normalized Features
             features_norm = normalize_features(features)
-            scores_all_norm = run_regression(features_norm, mode='all-norm', feature_selection_bool=feat_selection)
-
+            scores_all_norm  , selected_feat= run_regression(features_norm, mode='all-norm', feature_selection_bool=feat_selection)
+            selected_feat_all.extend(selected_feat)
 
             # 2.3) Reduced Feature Space
             #features_norm_reduced = reduce_features_all(features_norm)
