@@ -6,7 +6,7 @@ import nltk
 import numpy
 from tqdm import tqdm
 
-nltk.download("wordnet")
+#nltk.download("wordnet")
 import logging
 import random
 from datetime import datetime
@@ -127,18 +127,19 @@ def get_features(
         target_model = "meta-llama-Meta-Llama-3.1-8B-Instruct-Turbo"
         if source == target and da == "in-domain-adapt":
             target_split = "test"
-            source_split = "test"
+            source_split = "train"
             if ft:
-                source_model = "meta-llama-Meta-Llama-3.1-8B-Instruct-Turbo"
-                target_model = "anumafzal94-llama3.1"
+                source_model = "anumafzal94-llama3.1"
+                source_split = "test"
 
         elif source == target and da == "no-domain-adapt":
-            target_split = "test"
+            target_split = "train"
             source_split = "train"
             if ft:
                 source_model = "anumafzal94-llama3.1"
                 target_model = "anumafzal94-llama3.1"
                 source_split = "test"
+                target_split = "test"
 
         else:
             target_split = "test"
@@ -164,7 +165,8 @@ def get_features(
         list(task_specific_feature.values()), feature_weight
     )
 
-    target_task_scores = task_scores.loc[(task_scores["ds"] == target) & (task_scores["split"] == target_split) & (task_scores["model"] == target_model)]
+    target_task_scores = task_scores.loc[
+        (task_scores["ds"] == target) & (task_scores["split"] == target_split) & (task_scores["model"] == target_model)]
     task_specific_feature = get_task_spec_metrics(target, task, target_task_scores)
     features += list(task_specific_feature.values())
     feature_names += [f"target_{key}" for key in list(task_specific_feature.keys())]
@@ -176,7 +178,7 @@ def get_features(
     y_drop = weighted_y_source - weighted_y_target
 
     features += [weighted_y_target, weighted_y_source, y_drop]
-    feature_names += ["y_weighted_source", "y_weighted_target", "y_drop"]
+    feature_names += ["weighted_y_source", "weighted_y_target", "y_drop"]
 
     return features, feature_names
 
@@ -248,12 +250,14 @@ def construct_training_corpus(
     df_ft = df.loc[(df['split'] == 'test') & (df['ds'] != 'aclsum')]
 
 
-    template_2 = get_template(df_ft, num_domains=num_domains, num_samples=num_samples, ft = True
-                              )
-    template_2.to_excel("template2_ft.xlsx")
-    template_1 = get_template(df_zero_shot, num_domains=num_domains, num_samples=num_samples
-    )
-    template_1.to_excel("template1.xlsx")
+    #template_2 = get_template(df_ft, num_domains=num_domains, num_samples=num_samples, ft = True
+    #                          )
+    #template_2.to_excel("template2_ft.xlsx")
+    template_2 = pd.read_excel("template2_ft.xlsx")
+    #template_1 = get_template(df_zero_shot, num_domains=num_domains, num_samples=num_samples
+    #)
+    #template_1.to_excel("template1.xlsx")
+    template_1 = pd.read_excel("template1.xlsx")
 
 
     # print (template)

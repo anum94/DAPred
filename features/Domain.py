@@ -14,7 +14,7 @@ from sklearn.feature_extraction.text import (
 )
 
 # Definitions
-nltk.download("stopwords", quiet=True)
+#nltk.download("stopwords", quiet=True)
 STOP_WORDS = set(stopwords.words("english"))
 lemmatizer = WordNetLemmatizer()
 

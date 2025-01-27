@@ -15,14 +15,14 @@ warnings.filterwarnings("ignore")
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score, root_mean_squared_error
 from features.features import construct_training_corpus
 from collections import Counter
-# evaluation of a model using 10 features chosen with correlation
-from sklearn.datasets import make_regression
+from sklearn.model_selection import cross_val_score
 from sklearn.model_selection import train_test_split
 from sklearn.feature_selection import SelectKBest
 from sklearn.feature_selection import f_regression
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_absolute_error
-
+from sklearn.preprocessing import StandardScaler
+from sklearn.model_selection import KFold
 
 
 baseline_feature_target = ['target_rouge1', 'target_rouge2', 'target_rougeL',
@@ -64,9 +64,19 @@ reduced_features_source = {
     'source_fs_grounded_': ['source_fs_grounded']}
 def xgboost(X_train, X_test, y_train, y_test ):
 
+    scaler = StandardScaler()
+    X_train = scaler.fit_transform(X_train)
+    X_test = scaler.fit_transform(X_test)
     # Create regression matrices
     dtrain_reg = xgb.DMatrix(X_train, y_train, enable_categorical=True)
     dtest_reg = xgb.DMatrix(X_test, y_test, enable_categorical=True)
+
+    # Do K-fold cross validation
+    model = xgb.XGBRegressor()
+    kf = KFold(n_splits=10, shuffle=True, random_state=42)
+    kfold_scores = cross_validation(model, np.vstack((X_train, X_test)), np.vstack((y_train, y_test)),
+                                    kf, model='xgb')
+
 
     # Define hyperparameters
     params = {"objective": "reg:squarederror", "tree_method": "gpu_hist"}
@@ -94,13 +104,21 @@ def xgboost(X_train, X_test, y_train, y_test ):
     #print(f"Mean Squared Error: {mse:.2f}")
     #print(f"Mean Absolute Error: {mae:.2f}")
     #print(f"R^2 Score: {r2:.2f}")
-    return {'xgboost-mse': float(round(mse,3)), 'xgboost-mae': float(round(mae,3)),
+    scores = {'xgboost-mse': float(round(mse,3)), 'xgboost-mae': float(round(mae,3)),
             "xgboost-rmse": float(round(rmse,3)), "xgboost-r2":float(round(r2,3))}
+    scores.update(kfold_scores)
+    return
 
 
 def ridge_regression(X_train, X_test, y_train, y_test ):
 
+    scaler = StandardScaler()
+    X_train = scaler.fit_transform(X_train)
+    X_test = scaler.fit_transform(X_test)
 
+    kf = KFold(n_splits=10, shuffle=True, random_state=42)
+    kfold_scores = cross_validation(linear_model.Ridge(), np.vstack((X_train, X_test)), np.vstack((y_train, y_test)),
+                                    kf, model = 'ridge')
     # Instantiate the Ridge Regression model
     ridge_reg = RidgeCV().fit(X_train, y_train) # You can change the alpha parameter to add more or less regularization
 
@@ -124,9 +142,16 @@ def ridge_regression(X_train, X_test, y_train, y_test ):
     scores = {'ridge-mse': float(round(mse,3)), 'ridge-mae': float(round(mae,3)),
             "ridge-rmse": float(round(rmse,3)), "ridge-r2": float(round(r2,3))}
     #print(scores)
+    scores.update(kfold_scores)
     return scores
 def lasso_regression(X_train, X_test, y_train, y_test ):
 
+    scaler = StandardScaler()
+    X_train = scaler.fit_transform(X_train)
+    X_test = scaler.fit_transform(X_test)
+
+    kf = KFold(n_splits=10, shuffle=True, random_state=42)
+    kfold_scores = cross_validation(linear_model.Lasso(), np.vstack((X_train, X_test)), np.vstack((y_train, y_test)), kf, model = 'lasso')
     # Instantiate the Ridge Regression model
     lasso_reg = linear_model.LassoCV().fit(X_train, y_train)  # You can change the alpha parameter to add more or less regularization
 
@@ -151,13 +176,19 @@ def lasso_regression(X_train, X_test, y_train, y_test ):
     scores = {'lasso-mse': float(round(mse,3)), 'lasso-mae': float(round(mae,3)),
             "lasso-rmse": float(round(rmse,3)), "lasso-r2": float(round(r2,3))}
     #print (scores)
+    scores.update(kfold_scores)
     return scores
 
 def linear_regression(X_train, X_test, y_train, y_test ):
 
     # Instantiate the Ridge Regression model
     reg = LinearRegression() # You can change the alpha parameter to add more or less regularization
+    scaler = StandardScaler()
+    X_train = scaler.fit_transform(X_train)
+    X_test = scaler.fit_transform(X_test)
 
+    kf = KFold(n_splits=10, shuffle=True, random_state=42)
+    kfold_scores = cross_validation(reg, np.vstack((X_train, X_test)), np.vstack((y_train, y_test)), kf, model = '')
     # Train the model
     reg.fit(X_train, y_train)
 
@@ -179,6 +210,7 @@ def linear_regression(X_train, X_test, y_train, y_test ):
     #print("Intercept:", reg.intercept_)
     scores = {'mse': float(round(mse,3)), 'mae': float(round(mae,3)), "rmse": float(round(rmse,3)), "r2": float(round(r2,3))}
     #print (scores)
+    scores.update(kfold_scores)
     return scores
 
 
@@ -214,7 +246,7 @@ def derive_baseline_features(df):
     df = df[
         domain_specific_features +
         baseline_feature_source +
-        baseline_feature_target + ['y_drop']
+        baseline_feature_target + ['y_drop', 'target']
 
     ]
 
@@ -228,7 +260,7 @@ def derive_baseline_features(df):
 
     df['weighted_y_target'] = weighted_y_target
     df['weighted_y_source'] = weighted_y_source
-    #df['y_drop'] = y_drop
+    df['y_drop'] = y_drop
 
 
     return df
@@ -287,11 +319,49 @@ def select_features(X, y):
         features_df_new = []
         print ("No automatic feature reduction performed")
     return X_train_fs, y, features_df_new
+def get_domain_from_ds(datasets):
+    dataset_to_domain_dict = {}
 
-def run_regression(df:pd.DataFrame, mode:str, feature_selection_bool:bool):
+    domains = [dataset_to_domain_dict[dataset] for dataset in datasets]
+    return domains
+def cross_validation(reg_model, X, y, cv,model = ''):
+
+    scores = cross_val_score(
+            reg_model, X,
+            y,
+            scoring="neg_mean_squared_error", cv=cv)
+    mse = np.sqrt(-scores)
+    mse = mse.mean()
+
+    scores = cross_val_score(
+        reg_model, X,
+        y,
+        scoring="neg_mean_absolute_error", cv=cv)
+    mae = -scores
+    mae = mae.mean()
+
+    scores = cross_val_score(
+        reg_model, X,
+        y,
+        scoring="neg_root_mean_squared_error", cv=cv)
+    rmse = np.sqrt(-scores)
+    rmse = rmse.mean()
+
+    scores = cross_val_score(
+        reg_model, X,
+        y,
+        scoring="r2", cv=cv)
+    r2 = -scores
+    r2 = r2.mean()
+
+    scores = {model+'-k-fold-mse': float(round(mse, 3)), model+'-k-fold-mae': float(round(mae, 3)), model+"-k-fold-rmse": float(round(rmse, 3)),
+              model+"-k-fold-r2": float(round(r2, 3))}
+    return scores
+def run_regression(df:pd.DataFrame, mode:str, feature_selection_bool:bool, across_domain = False):
+
     if mode == "baseline-raw" or mode == 'baseline-norm':
         print(mode)
-        features_to_drop = baseline_feature_target + ['weighted_y_target','weighted_y_source',
+        features_to_drop = baseline_feature_target + ['weighted_y_target','weighted_y_source', 'target',
                                                       #'source_shannon_entropy', 'js-divergence', 'vocab-overlap',
                                                       ]
     elif mode == 'all-raw' or mode == 'all-norm':
@@ -300,6 +370,7 @@ def run_regression(df:pd.DataFrame, mode:str, feature_selection_bool:bool):
                             'target_rougeL', 'target_vocab_overlap','target_Relevance', 'target_Coherence',
                             'target_Consistency', 'target_Fluency','da-type','source', 'target',
                             'target_fs_grounded',  'weighted_y_target',
+                            #'y_weighted_target', 'y_weighted_source',
                             'target_bert_precision', 'target_bert_recall',  'source_shannon_entropy',
                             # 'js-divergence', 'vocab-overlap',
                   ]
@@ -313,11 +384,15 @@ def run_regression(df:pd.DataFrame, mode:str, feature_selection_bool:bool):
         print ("mode unknown. No Regression took place.")
         return
 
-    df = df.drop(features_to_drop, axis=1)
-    df = df.dropna()
+    #df = df.dropna()
     df = df.sample(frac=1)
+    y_target = df[['y_drop', 'target']]
+    y = df[['y_drop']]
+
+
+    df = df.drop(features_to_drop, axis=1)
     # Extract feature and target arrays
-    X, y = df.drop('y_drop', axis=1), df[['y_drop']]
+    X = df.drop('y_drop', axis=1)
     # Extract text features
     cats = X.select_dtypes(exclude=np.number).columns.tolist()
 
@@ -329,10 +404,13 @@ def run_regression(df:pd.DataFrame, mode:str, feature_selection_bool:bool):
     selected_features = []
     if feature_selection_bool:
         X, y, selected_features = select_features(X, y)
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2,)
+
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.33,)
+
     print ("Predictions with XGBoost")
     #xgboost_scores =  xgboost(X_train, X_test, y_train, y_test)
-    xgboost_scores = {'xgboost-mse': 0, 'xgboost-mae': 0, "xgboost-rmse": 0, "xgboost-r2":0}
+    xgboost_scores = {'xgboost-mse': 0, 'xgboost-mae': 0, "xgboost-rmse": 0, "xgboost-r2":0,
+                      'xgboost-k-fold-mse': 0, 'xgboost-k-fold-mae': 0, "xgboost-k-fold-rmse": 0, "xgboost-k-fold-r2":0}
 
     print("Predictions with Linear Regression")
     reg_scores = linear_regression(X_train, X_test, y_train, y_test)
@@ -409,11 +487,12 @@ if __name__ == '__main__':
     args = parser.parse_args()
     num_samples = 500
     total_domains = 14
-    minumum_domains = 3
-    cache = True
-    sklearn_feature_selection = [True, False]
+    minumum_domains = 14
+    cache = False
+    sklearn_feature_selection = [False, True]
     selected_feat_rouge = []
     selected_feat_all = []
+    across_domain = False
 
 
     all_scores = None
@@ -438,6 +517,8 @@ if __name__ == '__main__':
     for feat_selection in sklearn_feature_selection:
         for n in range(minumum_domains,total_domains+1,1):
             print(f"Number of domains: {n}")
+            if n == 14:
+                across_domain = True
 
 
 
@@ -452,7 +533,8 @@ if __name__ == '__main__':
 
             # 1.2) Normalized features -> check if even needed
             features_baseline_norm = normalize_features(features_baseline)
-            scores_baseline_norm, selected_feat = run_regression(features_baseline_norm, mode='baseline-norm', feature_selection_bool=feat_selection)
+            scores_baseline_norm, selected_feat = run_regression(features_baseline_norm, mode='baseline-norm',
+                                                                 feature_selection_bool=feat_selection, across_domain=across_domain)
             selected_feat_rouge.extend(selected_feat )
 
             # 1.3) Normalized and reduced features
@@ -468,7 +550,8 @@ if __name__ == '__main__':
 
             # 2.2) Normalized Features
             features_norm = normalize_features(features)
-            scores_all_norm  , selected_feat= run_regression(features_norm, mode='all-norm', feature_selection_bool=feat_selection)
+            scores_all_norm  , selected_feat= run_regression(features_norm, mode='all-norm', feature_selection_bool=feat_selection,
+                                                             across_domain=across_domain)
             selected_feat_all.extend(selected_feat)
 
             # 2.3) Reduced Feature Space
@@ -494,10 +577,7 @@ if __name__ == '__main__':
         print (f"final scores stored at: {file_name}")
         print(f"Feature Selection Baseline : {Counter(selected_feat_rouge)}")
         print (f"Feature Selection : {Counter(selected_feat_all)}")
-clear_cache()
-
-
-
+#clear_cache()
 
 
 

@@ -2,12 +2,12 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 
-#df = pd.read_excel("training_features/2024-11-21_15-40-46/scores_llama3.1_8b_0-shot_100.xlsx")
-df=pd.read_excel("training_features/2024-12-06_00-04-14/scores_llama3.1_8b_0-shot_500_gpu.xlsx")
+df = pd.read_excel("training_features/2024-11-14_11-39-15/scores_llama3.1_8b_0-shot_500.xlsx")
 df_all_norm = df.loc[df['features'] == 'all-norm']
+df_all_norm = df_all_norm.loc[df_all_norm['feature_selection'] == True]
 df_all_norm = df_all_norm.drop(['features'], axis = 1)
 df_all_norm.set_index('num_datasets', inplace=True)
-df_all_norm.columns = [col+'-all-norm' for col in df_all_norm.columns]
+df_all_norm.columns = ['DA-Pred_'+col for col in df_all_norm.columns]
 #df_all_norm = df_all_norm.where(df_all_norm == 0.11, -1)
 #df_all_norm = df_all_norm.where(df_all_norm > 2, 2)
 
@@ -19,9 +19,10 @@ df_all_norm.columns = [col+'-all-norm' for col in df_all_norm.columns]
 #df_all_raw.columns = [col+'-all' for col in df_all_raw.columns]
 
 df_baseline_norm = df.loc[df['features'] == 'baseline-norm']
+df_baseline_norm = df_baseline_norm.loc[df_baseline_norm['feature_selection'] == True]
 df_baseline_norm = df_baseline_norm.drop(['features'], axis = 1)
 df_baseline_norm.set_index('num_datasets', inplace=True)
-df_baseline_norm.columns = [col+'-base-norm' for col in df_baseline_norm.columns]
+df_baseline_norm.columns = ['ROUGE-'+col for col in df_baseline_norm.columns]
 
 #df_baseline_raw = df.loc[df['features'] == 'baseline-raw']
 #df_baseline_raw = df_baseline_raw.drop(['features'], axis = 1)
@@ -33,46 +34,23 @@ df_plot = pd.concat([df_all_norm,df_baseline_norm], axis = 1)
 
 # Plot Raw vs normalized features
 # 1) Baseline
-columns_to_plot = [col for col in df_plot.columns if 'base' in col and 'r2' in col]
-df_plot[columns_to_plot].plot()
-plt.show()
-
-columns_to_plot = [col for col in df_plot.columns if 'base' in col and 'rmse' in col]
-df_plot[columns_to_plot].plot()
-plt.show()
-
-#2) All features
-columns_to_plot = [col for col in df_plot.columns if 'all' in col and 'r2' in col]
-df_plot[columns_to_plot].plot()
-plt.show()
-
-columns_to_plot = [col for col in df_plot.columns if 'all' in col and 'rmse' in col]
-df_plot[columns_to_plot].plot()
-plt.show()
-
-
-
-# Plot of r2
 columns_to_plot = [col for col in df_plot.columns if 'r2' in col]
 df_plot[columns_to_plot].plot()
+plt.legend(fontsize=14)
+plt.yticks(fontsize=18)
+plt.xticks(fontsize=18)
+plt.xlabel("# Datasets",fontsize=18)
+plt.ylabel(f"R\N{SUPERSCRIPT TWO}", fontsize=18)
 plt.show()
 
-# Plot of rmse
 columns_to_plot = [col for col in df_plot.columns if 'rmse' in col]
 df_plot[columns_to_plot].plot()
+plt.legend(fontsize=14)
+plt.yticks(fontsize=18)
+plt.xticks(fontsize=18)
+plt.xlabel("# Datasets",fontsize=18)
+plt.ylabel(f"RMSE", fontsize=18)
 plt.show()
-
-
-# Plot of r2
-columns_to_plot = [col for col in df_plot.columns if '-mse-' in col]
-df_plot[columns_to_plot].plot()
-plt.show()
-
-# Plot of r2
-columns_to_plot = [col for col in df_plot.columns if '-mae-' in col]
-df_plot[columns_to_plot].plot()
-plt.show()
-
 
 
 
