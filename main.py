@@ -107,7 +107,7 @@ def xgboost(X_train, X_test, y_train, y_test ):
     scores = {'xgboost-mse': float(round(mse,3)), 'xgboost-mae': float(round(mae,3)),
             "xgboost-rmse": float(round(rmse,3)), "xgboost-r2":float(round(r2,3))}
     scores.update(kfold_scores)
-    return
+    return scores
 
 
 def ridge_regression(X_train, X_test, y_train, y_test ):
