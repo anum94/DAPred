@@ -488,7 +488,7 @@ if __name__ == '__main__':
     num_samples = 500
     total_domains = 14
     minumum_domains = 14
-    cache = False
+    cache = True
     sklearn_feature_selection = [False, True]
     selected_feat_rouge = []
     selected_feat_all = []
