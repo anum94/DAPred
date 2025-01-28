@@ -408,9 +408,9 @@ def run_regression(df:pd.DataFrame, mode:str, feature_selection_bool:bool, acros
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.33,)
 
     print ("Predictions with XGBoost")
-    #xgboost_scores =  xgboost(X_train, X_test, y_train, y_test)
-    xgboost_scores = {'xgboost-mse': 0, 'xgboost-mae': 0, "xgboost-rmse": 0, "xgboost-r2":0,
-                      'xgboost-k-fold-mse': 0, 'xgboost-k-fold-mae': 0, "xgboost-k-fold-rmse": 0, "xgboost-k-fold-r2":0}
+    xgboost_scores =  xgboost(X_train, X_test, y_train, y_test)
+    #xgboost_scores = {'xgboost-mse': 0, 'xgboost-mae': 0, "xgboost-rmse": 0, "xgboost-r2":0,
+    #                  'xgboost-k-fold-mse': 0, 'xgboost-k-fold-mae': 0, "xgboost-k-fold-rmse": 0, "xgboost-k-fold-r2":0}
 
     print("Predictions with Linear Regression")
     reg_scores = linear_regression(X_train, X_test, y_train, y_test)
@@ -573,6 +573,7 @@ if __name__ == '__main__':
 
         file_name = f"scores_llama3.1_8b_0-shot_{num_samples}.xlsx"
         file_name = os.path.join(directory, file_name)
+        print (file_name)
         all_scores.to_excel(file_name)
         print (f"final scores stored at: {file_name}")
         print(f"Feature Selection Baseline : {Counter(selected_feat_rouge)}")
