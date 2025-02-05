@@ -73,7 +73,7 @@ def xgboost(X_train, X_test, y_train, y_test ):
 
     # Do K-fold cross validation
     model = xgb.XGBRegressor()
-    kf = KFold(n_splits=10, shuffle=True, random_state=42)
+    kf = KFold(n_splits=5, shuffle=True, random_state=42)
     kfold_scores = cross_validation(model, np.vstack((X_train, X_test)), np.vstack((y_train, y_test)),
                                     kf, model='xgb')
 
@@ -351,7 +351,7 @@ def cross_validation(reg_model, X, y, cv,model = ''):
         reg_model, X,
         y,
         scoring="r2", cv=cv)
-    r2 = -scores
+    r2 = scores
     r2 = r2.mean()
 
     scores = {model+'-k-fold-mse': float(round(mse, 3)), model+'-k-fold-mae': float(round(mae, 3)), model+"-k-fold-rmse": float(round(rmse, 3)),
@@ -408,9 +408,9 @@ def run_regression(df:pd.DataFrame, mode:str, feature_selection_bool:bool, acros
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.33,)
 
     print ("Predictions with XGBoost")
-    xgboost_scores =  xgboost(X_train, X_test, y_train, y_test)
-    #xgboost_scores = {'xgboost-mse': 0, 'xgboost-mae': 0, "xgboost-rmse": 0, "xgboost-r2":0,
-    #                  'xgboost-k-fold-mse': 0, 'xgboost-k-fold-mae': 0, "xgboost-k-fold-rmse": 0, "xgboost-k-fold-r2":0}
+    #xgboost_scores =  xgboost(X_train, X_test, y_train, y_test)
+    xgboost_scores = {'xgboost-mse': 0, 'xgboost-mae': 0, "xgboost-rmse": 0, "xgboost-r2":0,
+                      'xgboost-k-fold-mse': 0, 'xgboost-k-fold-mae': 0, "xgboost-k-fold-rmse": 0, "xgboost-k-fold-r2":0}
 
     print("Predictions with Linear Regression")
     reg_scores = linear_regression(X_train, X_test, y_train, y_test)
@@ -487,7 +487,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
     num_samples = 500
     total_domains = 14
-    minumum_domains = 14
+    minumum_domains = 3
     cache = True
     sklearn_feature_selection = [False, True]
     selected_feat_rouge = []
@@ -571,7 +571,7 @@ if __name__ == '__main__':
             else:
                 all_scores = pd.concat([all_scores, pd_scores], axis=0)
 
-        file_name = f"scores_llama3.1_8b_0-shot_{num_samples}.xlsx"
+        file_name = f"scores_llama3.1_8b_0-shot_{num_samples}_kfold.xlsx"
         file_name = os.path.join(directory, file_name)
         print (file_name)
         all_scores.to_excel(file_name)
