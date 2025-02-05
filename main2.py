@@ -73,9 +73,9 @@ def xgboost(X_train, X_test, y_train, y_test ):
 
     # Do K-fold cross validation
     model = xgb.XGBRegressor()
-    kf = KFold(n_splits=10, shuffle=True, random_state=42)
-    kfold_scores = cross_validation(model, np.vstack((X_train, X_test)), np.vstack((y_train, y_test)),
-                                    kf, model='xgb')
+    kf = KFold(n_splits=3, shuffle=True, random_state=42)
+    #kfold_scores = cross_validation(model, np.vstack((X_train, X_test)), np.vstack((y_train, y_test)),
+    #                                kf, model='xgb')
 
 
     # Define hyperparameters
@@ -104,9 +104,8 @@ def xgboost(X_train, X_test, y_train, y_test ):
     #print(f"Mean Squared Error: {mse:.2f}")
     #print(f"Mean Absolute Error: {mae:.2f}")
     #print(f"R^2 Score: {r2:.2f}")
-    scores = {'xgboost-mse': float(round(mse,3)), 'xgboost-mae': float(round(mae,3)),
-            "xgboost-rmse": float(round(rmse,3)), "xgboost-r2":float(round(r2,3))}
-    scores.update(kfold_scores)
+    scores = {'xgboost-y_drop': preds}
+    #scores.update(kfold_scores)
     return
 
 
@@ -116,9 +115,9 @@ def ridge_regression(X_train, X_test, y_train, y_test ):
     X_train = scaler.fit_transform(X_train)
     X_test = scaler.fit_transform(X_test)
 
-    kf = KFold(n_splits=10, shuffle=True, random_state=42)
-    kfold_scores = cross_validation(linear_model.Ridge(), np.vstack((X_train, X_test)), np.vstack((y_train, y_test)),
-                                    kf, model = 'ridge')
+    kf = KFold(n_splits=3, shuffle=True, random_state=42)
+    #kfold_scores = cross_validation(linear_model.Ridge(), np.vstack((X_train, X_test)), np.vstack((y_train, y_test)),
+    #                                kf, model = 'ridge')
     # Instantiate the Ridge Regression model
     ridge_reg = RidgeCV().fit(X_train, y_train) # You can change the alpha parameter to add more or less regularization
 
@@ -139,10 +138,9 @@ def ridge_regression(X_train, X_test, y_train, y_test ):
     # Optional: Display the coefficients
     #print("Coefficients:", ridge_reg.coef_)
     #print("Intercept:", ridge_reg.intercept_)
-    scores = {'ridge-mse': float(round(mse,3)), 'ridge-mae': float(round(mae,3)),
-            "ridge-rmse": float(round(rmse,3)), "ridge-r2": float(round(r2,3))}
+    scores = {'ridge-y_drop': y_pred}
     #print(scores)
-    scores.update(kfold_scores)
+    #scores.update(kfold_scores)
     return scores
 def lasso_regression(X_train, X_test, y_train, y_test ):
 
@@ -150,8 +148,8 @@ def lasso_regression(X_train, X_test, y_train, y_test ):
     X_train = scaler.fit_transform(X_train)
     X_test = scaler.fit_transform(X_test)
 
-    kf = KFold(n_splits=10, shuffle=True, random_state=42)
-    kfold_scores = cross_validation(linear_model.Lasso(), np.vstack((X_train, X_test)), np.vstack((y_train, y_test)), kf, model = 'lasso')
+    kf = KFold(n_splits=3, shuffle=True, random_state=42)
+    #kfold_scores = cross_validation(linear_model.Lasso(), np.vstack((X_train, X_test)), np.vstack((y_train, y_test)), kf, model = 'lasso')
     # Instantiate the Ridge Regression model
     lasso_reg = linear_model.LassoCV().fit(X_train, y_train)  # You can change the alpha parameter to add more or less regularization
 
@@ -173,10 +171,8 @@ def lasso_regression(X_train, X_test, y_train, y_test ):
     # Optional: Display the coefficients
     #print("Coefficients:", lasso_reg.coef_)
     #print("Intercept:", lasso_reg.intercept_)
-    scores = {'lasso-mse': float(round(mse,3)), 'lasso-mae': float(round(mae,3)),
-            "lasso-rmse": float(round(rmse,3)), "lasso-r2": float(round(r2,3))}
-    #print (scores)
-    scores.update(kfold_scores)
+    scores = {'lasso-y_drop': y_pred}
+    #scores.update(kfold_scores)
     return scores
 
 def linear_regression(X_train, X_test, y_train, y_test ):
@@ -187,8 +183,8 @@ def linear_regression(X_train, X_test, y_train, y_test ):
     X_train = scaler.fit_transform(X_train)
     X_test = scaler.fit_transform(X_test)
 
-    kf = KFold(n_splits=10, shuffle=True, random_state=42)
-    kfold_scores = cross_validation(reg, np.vstack((X_train, X_test)), np.vstack((y_train, y_test)), kf, model = '')
+    #kf = KFold(n_splits=3, shuffle=True, random_state=42)
+    #kfold_scores = cross_validation(reg, np.vstack((X_train, X_test)), np.vstack((y_train, y_test)), kf, model = '')
     # Train the model
     reg.fit(X_train, y_train)
 
@@ -208,9 +204,9 @@ def linear_regression(X_train, X_test, y_train, y_test ):
     # Optional: Display the coefficients
     #print("Coefficients:", reg.coef_)
     #print("Intercept:", reg.intercept_)
-    scores = {'mse': float(round(mse,3)), 'mae': float(round(mae,3)), "rmse": float(round(rmse,3)), "r2": float(round(r2,3))}
+    scores = {'regression-y_drop': y_pred}
     #print (scores)
-    scores.update(kfold_scores)
+    #scores.update(kfold_scores)
     return scores
 
 
@@ -540,15 +536,15 @@ if __name__ == '__main__':
             # 1) Prepare Baseline Features
 
             # 1.1) Raw features
-            features_baseline = derive_baseline_features(features)
+            #features_baseline = derive_baseline_features(features)
             #print (f"Baseline Features: {features_baseline.columns}")
             #scores_baseline_raw , selected_feat= run_regression(features_baseline, mode='baseline-raw')
 
             # 1.2) Normalized features -> check if even needed
-            features_baseline_norm = normalize_features(features_baseline)
-            scores_baseline_norm, selected_feat = run_regression(features_baseline_norm, mode='baseline-norm',
-                                                                 feature_selection_bool=feat_selection, across_domain=across_domain)
-            selected_feat_rouge.extend(selected_feat )
+            #features_baseline_norm = normalize_features(features_baseline)
+            #scores_baseline_norm, selected_feat = run_regression(features_baseline_norm, mode='baseline-norm',
+            #                                                     feature_selection_bool=feat_selection, across_domain=across_domain)
+            #selected_feat_rouge.extend(selected_feat )
 
             # 1.3) Normalized and reduced features
             #features_baseline_norm_red = derive_baseline_features_red(features_baseline_norm)
@@ -572,7 +568,7 @@ if __name__ == '__main__':
             #scores_all_norm_red = run_regression(features_norm_reduced, mode='all-red', feature_selection_bool=feat_selection)
 
 
-            pd_scores = pd.DataFrame.from_records([scores_baseline_norm, scores_all_norm])
+            pd_scores = pd.DataFrame.from_records([scores_all_norm])
             pd_scores['num_datasets'] = [n] * len(pd_scores)
             #print (pd_scores)
             file_name = f"scores_ds_{n}_llama3.1_8b_0-shot_{num_samples}.xlsx"
