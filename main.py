@@ -73,7 +73,7 @@ def xgboost(X_train, X_test, y_train, y_test ):
 
     # Do K-fold cross validation
     model = xgb.XGBRegressor()
-    kf = KFold(n_splits=5, shuffle=True, random_state=42)
+    kf = KFold(n_splits=3, shuffle=True, random_state=42)
     kfold_scores = cross_validation(model, np.vstack((X_train, X_test)), np.vstack((y_train, y_test)),
                                     kf, model='xgb')
 
@@ -116,7 +116,7 @@ def ridge_regression(X_train, X_test, y_train, y_test ):
     X_train = scaler.fit_transform(X_train)
     X_test = scaler.fit_transform(X_test)
 
-    kf = KFold(n_splits=10, shuffle=True, random_state=42)
+    kf = KFold(n_splits=3, shuffle=True, random_state=42)
     kfold_scores = cross_validation(linear_model.Ridge(), np.vstack((X_train, X_test)), np.vstack((y_train, y_test)),
                                     kf, model = 'ridge')
     # Instantiate the Ridge Regression model
@@ -150,7 +150,7 @@ def lasso_regression(X_train, X_test, y_train, y_test ):
     X_train = scaler.fit_transform(X_train)
     X_test = scaler.fit_transform(X_test)
 
-    kf = KFold(n_splits=10, shuffle=True, random_state=42)
+    kf = KFold(n_splits=3, shuffle=True, random_state=42)
     kfold_scores = cross_validation(linear_model.Lasso(), np.vstack((X_train, X_test)), np.vstack((y_train, y_test)), kf, model = 'lasso')
     # Instantiate the Ridge Regression model
     lasso_reg = linear_model.LassoCV().fit(X_train, y_train)  # You can change the alpha parameter to add more or less regularization
@@ -187,7 +187,7 @@ def linear_regression(X_train, X_test, y_train, y_test ):
     X_train = scaler.fit_transform(X_train)
     X_test = scaler.fit_transform(X_test)
 
-    kf = KFold(n_splits=10, shuffle=True, random_state=42)
+    kf = KFold(n_splits=3, shuffle=True, random_state=42)
     kfold_scores = cross_validation(reg, np.vstack((X_train, X_test)), np.vstack((y_train, y_test)), kf, model = '')
     # Train the model
     reg.fit(X_train, y_train)
