@@ -2,6 +2,7 @@ import argparse
 import os.path
 import gc
 import math
+import joblib
 from sklearn import linear_model
 from datetime import datetime
 import warnings
@@ -26,11 +27,11 @@ from sklearn.model_selection import KFold
 
 
 baseline_feature_target = ['target_rouge1', 'target_rouge2', 'target_rougeL',
-                          # 'target_vocab_overlap'
+                           'target_vocab_overlap'
                            ]
 
 baseline_feature_source = ['source_rouge1', 'source_rouge2', 'source_rougeL',
-                           #'source_vocab_overlap'
+                           'source_vocab_overlap'
                            ]
 
 domain_specific_features = ['learning_difficult', 'vocab-overlap',
@@ -62,7 +63,7 @@ reduced_features_source = {
     'source_vocab_overlap_': ['source_vocab_overlap'],
     'source_llm_eval': ['source_Relevance', 'source_Coherence', 'source_Consistency', 'source_Fluency'],
     'source_fs_grounded_': ['source_fs_grounded']}
-def xgboost(X_train, X_test, y_train, y_test ):
+def xgboost(X_train, X_test, y_train, y_test, mode="" ):
 
     scaler = StandardScaler()
     X_train = scaler.fit_transform(X_train)
@@ -79,10 +80,11 @@ def xgboost(X_train, X_test, y_train, y_test ):
 
 
     # Define hyperparameters
-    params = {"objective": "reg:squarederror", "tree_method": "gpu_hist"}
+    params = {"objective": "reg:squarederror", "tree_method": "hist"}
 
     n = 20
     evals = [(dtrain_reg, "train"), (dtest_reg, "validation")]
+
 
     model = xgb.train(
         params=params,
@@ -91,6 +93,9 @@ def xgboost(X_train, X_test, y_train, y_test ):
         evals=evals,
         verbose_eval=2
     )
+    os.makedirs(f"{directory}/models/{mode}/", exist_ok=True)
+    model_path = f"{directory}/models/{mode}/xgb_model.json"
+    model.save_model(model_path)
 
     preds = model.predict(dtest_reg)
     rmse = root_mean_squared_error(y_test, preds)
@@ -110,7 +115,7 @@ def xgboost(X_train, X_test, y_train, y_test ):
     return scores
 
 
-def ridge_regression(X_train, X_test, y_train, y_test ):
+def ridge_regression(X_train, X_test, y_train, y_test, mode=""  ):
 
     scaler = StandardScaler()
     X_train = scaler.fit_transform(X_train)
@@ -122,7 +127,9 @@ def ridge_regression(X_train, X_test, y_train, y_test ):
     # Instantiate the Ridge Regression model
     ridge_reg = RidgeCV().fit(X_train, y_train) # You can change the alpha parameter to add more or less regularization
 
-
+    os.makedirs(f"{directory}/models/{mode}/", exist_ok=True)
+    model_path = f"{directory}/models/{mode}/ridge_model.joblib"
+    joblib.dump(ridge_reg, model_path)
     # Make predictions
     y_pred = ridge_reg.predict(X_test)
 
@@ -144,7 +151,7 @@ def ridge_regression(X_train, X_test, y_train, y_test ):
     #print(scores)
     scores.update(kfold_scores)
     return scores
-def lasso_regression(X_train, X_test, y_train, y_test ):
+def lasso_regression(X_train, X_test, y_train, y_test , mode="" ):
 
     scaler = StandardScaler()
     X_train = scaler.fit_transform(X_train)
@@ -155,8 +162,9 @@ def lasso_regression(X_train, X_test, y_train, y_test ):
     # Instantiate the Ridge Regression model
     lasso_reg = linear_model.LassoCV().fit(X_train, y_train)  # You can change the alpha parameter to add more or less regularization
 
-
-
+    os.makedirs(f"{directory}/models/{mode}/", exist_ok=True)
+    model_path = f"{directory}/models/{mode}/lasso_model.joblib"
+    joblib.dump(lasso_reg, model_path)
     # Make predictions
     y_pred = lasso_reg.predict(X_test)
 
@@ -179,7 +187,7 @@ def lasso_regression(X_train, X_test, y_train, y_test ):
     scores.update(kfold_scores)
     return scores
 
-def linear_regression(X_train, X_test, y_train, y_test ):
+def linear_regression(X_train, X_test, y_train, y_test, mode=""  ):
 
     # Instantiate the Ridge Regression model
     reg = LinearRegression() # You can change the alpha parameter to add more or less regularization
@@ -191,6 +199,9 @@ def linear_regression(X_train, X_test, y_train, y_test ):
     kfold_scores = cross_validation(reg, np.vstack((X_train, X_test)), np.vstack((y_train, y_test)), kf, model = '')
     # Train the model
     reg.fit(X_train, y_train)
+    os.makedirs(f"{directory}/models/{mode}/", exist_ok=True)
+    model_path = f"{directory}/models/{mode}/reg.joblib"
+    joblib.dump(reg, model_path)
 
     # Make predictions
     y_pred = reg.predict(X_test)
@@ -408,18 +419,16 @@ def run_regression(df:pd.DataFrame, mode:str, feature_selection_bool:bool, acros
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.33,)
 
     print ("Predictions with XGBoost")
-    xgboost_scores =  xgboost(X_train, X_test, y_train, y_test)
-    #xgboost_scores = {'xgboost-mse': 0, 'xgboost-mae': 0, "xgboost-rmse": 0, "xgboost-r2":0,
-    #                  'xgboost-k-fold-mse': 0, 'xgboost-k-fold-mae': 0, "xgboost-k-fold-rmse": 0, "xgboost-k-fold-r2":0}
+    xgboost_scores =  xgboost(X_train, X_test, y_train, y_test, mode)
 
     print("Predictions with Linear Regression")
-    reg_scores = linear_regression(X_train, X_test, y_train, y_test)
+    reg_scores = linear_regression(X_train, X_test, y_train, y_test, mode)
 
     print ("Predictions with Ridge Regression")
-    ridge_scores = ridge_regression(X_train, X_test, y_train, y_test)
+    ridge_scores = ridge_regression(X_train, X_test, y_train, y_test,mode)
 
     print ("Predictions with Lasso Regression")
-    lasso_scores = lasso_regression(X_train, X_test, y_train, y_test)
+    lasso_scores = lasso_regression(X_train, X_test, y_train, y_test,mode)
 
     ridge_scores.update(reg_scores)
     ridge_scores.update(xgboost_scores)
@@ -487,7 +496,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
     num_samples = 500
     total_domains = 14
-    minumum_domains = 3
+    minumum_domains = 14
     cache = True
     sklearn_feature_selection = [False, True]
     selected_feat_rouge = []
@@ -508,6 +517,7 @@ if __name__ == '__main__':
     else:
         if not os.path.exists(directory):
             os.makedirs(directory)
+            os.makedirs(os.path.join(directory, "models"))
         all_features = construct_training_corpus(num_domains=total_domains, da_type=args.da_type,
                                                  template_path=args.template_path, num_samples=num_samples)
 

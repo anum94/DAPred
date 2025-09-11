@@ -79,7 +79,7 @@ def xgboost(X_train, X_test, y_train, y_test ):
 
 
     # Define hyperparameters
-    params = {"objective": "reg:squarederror", "tree_method": "gpu_hist"}
+    params = {"objective": "reg:squarederror", "tree_method": "hist"}
 
     n = 20
     evals = [(dtrain_reg, "train"), (dtest_reg, "validation")]
@@ -106,7 +106,7 @@ def xgboost(X_train, X_test, y_train, y_test ):
     #print(f"R^2 Score: {r2:.2f}")
     scores = {'xgboost-y_drop': preds}
     #scores.update(kfold_scores)
-    return
+    return scores
 
 
 def ridge_regression(X_train, X_test, y_train, y_test ):
@@ -418,8 +418,6 @@ def run_regression(df:pd.DataFrame, mode:str, feature_selection_bool:bool, acros
 
     print ("Predictions with XGBoost")
     xgboost_scores =  xgboost(X_train, X_test, y_train, y_test)
-    #xgboost_scores = {'xgboost-mse': 0, 'xgboost-mae': 0, "xgboost-rmse": 0, "xgboost-r2":0,
-    #                  'xgboost-k-fold-mse': 0, 'xgboost-k-fold-mae': 0, "xgboost-k-fold-rmse": 0, "xgboost-k-fold-r2":0}
 
     print("Predictions with Linear Regression")
     reg_scores = linear_regression(X_train, X_test, y_train, y_test)
@@ -496,7 +494,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
     num_samples = 500
     total_domains = 14
-    minumum_domains = 14
+    minumum_domains = 4
     cache = True
     sklearn_feature_selection = [False, True]
     selected_feat_rouge = []
