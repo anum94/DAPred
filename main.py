@@ -487,7 +487,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
     num_samples = 500
     total_domains = 14
-    minumum_domains = 3
+    minumum_domains = 10
     cache = True
     sklearn_feature_selection = [False, True]
     selected_feat_rouge = []
