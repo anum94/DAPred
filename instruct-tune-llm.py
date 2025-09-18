@@ -191,7 +191,7 @@ model.eval()
 
 import os
 
-os.environ["TOKEN"] = "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"
+os.environ["TOKEN"] = ""
 
 from peft import AutoPeftModelForCausalLM
 from transformers import AutoTokenizer
