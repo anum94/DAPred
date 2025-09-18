@@ -46,9 +46,22 @@ def get_ttl_hash(seconds=86400):
     return round(time.time() / seconds)
 @lru_cache(maxsize=128)
 def get_domain(domain, split, num_samples=5, ttl_hash=None):
+    if domain in ["legal", "medical", "scientific","news"]:
+        load_csv = True
+        data_files = {
+            "train": f"low-resource_datasets/unseen_{domain}_data.csv",
+            "validation": f"low-resource_datasets/unseen_{domain}_data.csv",
+            "test": f"low-resource_datasets/unseen_{domain}_data.csv",
+
+        }
+    else:
+        load_csv = False
+        data_files = {}
     dataset = load_dataset(
         dataset=domain,
         samples=num_samples,
+        load_csv=load_csv,
+        data_files=data_files,
     )
 
     articles = dataset.get_split(split)["text"]
@@ -183,6 +196,88 @@ def get_features(
     return features, feature_names
 
 
+def get_template_lr(task_scores: pd.DataFrame, lr_domain=None, num_samples=10, ft = False) -> pd.DataFrame:
+
+
+    domains = list(set(task_scores["dataset_name"]))
+    domains.remove(lr_domain)
+
+    #task_scores = task_scores.drop(columns=task_scores.columns[:19])
+    task = "summarization"
+    feature_names = ["dummy_feature_name"] * (len(task_scores.columns) - 1)
+    df = pd.DataFrame()
+
+    features = []
+    da = "in-domain-adapt"
+    features.append(da)
+    for domain in tqdm(domains):
+        features = []
+        feature_names = [
+            "da-type",
+            "source",
+            "target",
+            "ft"
+        ]
+        features.append(da)
+        features.append(domain)
+        features.append(lr_domain)
+        features.append(ft)
+
+        domain_spec_features = get_domain_specific_metrics(lr_domain, num_samples=num_samples)
+        features += list(domain_spec_features.values())
+        feature_names += list(domain_spec_features.keys())
+
+        domain_similarity_features = get_domain_similarity_metrics(
+            lr_domain, domain, da, num_samples=num_samples
+        )
+        features += list(domain_similarity_features.values())
+        feature_names += list(domain_similarity_features.keys())
+
+        try:
+            source_model = "meta-llama-Meta-Llama-3.1-8B-Instruct-Turbo"
+
+            source_task_scores = task_scores.loc[
+                (task_scores["ds"] == domain) & (task_scores["split"] == "test") & (
+                            task_scores["model"] == source_model)
+                ]
+        except:
+            # todo: add a dummy variable for this
+            print(
+                f"Failed to get scores for domain {domain} for {da} setting. Assigning dummy scores."
+            )
+
+        task_specific_feature = get_task_spec_metrics(domain, task, source_task_scores)
+        features += list(task_specific_feature.values())
+        feature_names += [f"source_{key}" for key in list(task_specific_feature.keys())]
+        feature_weight = [1 / len(task_specific_feature.values())] * len(
+            task_specific_feature.values())  # equal weight to all features
+        weighted_y_source = weighted_average(
+            list(task_specific_feature.values()), feature_weight
+        )
+
+        target_task_scores = task_scores.loc[
+            (task_scores["ds"] == target) & (task_scores["split"] == target_split) & (
+                        task_scores["model"] == target_model)]
+        task_specific_feature = get_task_spec_metrics(target, task, target_task_scores)
+        features += list(task_specific_feature.values())
+        feature_names += [f"target_{key}" for key in list(task_specific_feature.keys())]
+        feature_weight = [1 / len(task_specific_feature.values())] * len(
+            task_specific_feature.values())  # equal weight to all features
+        weighted_y_target = weighted_average(
+            list(task_specific_feature.values()), feature_weight
+        )
+
+        y_drop = weighted_y_source - weighted_y_target
+
+        features += [weighted_y_target, weighted_y_source, y_drop]
+        feature_names += ["weighted_y_source", "weighted_y_target", "y_drop"]
+
+        if df.columns.empty:
+            df = pd.DataFrame(columns=feature_names)
+        df.loc[len(df)] = features
+
+
+    return df
 def get_template(task_scores: pd.DataFrame, num_domains=None, num_samples=10, ft = False) -> pd.DataFrame:
 
 

@@ -16,6 +16,7 @@ from ds.pubmed import Pubmed
 from ds.samsum import SAMSum
 from ds.wispermed import LaySum
 from ds.xlsum import XlSum
+from ds.custom import Custom
 
 translate_dataset_name = {
     "arxiv": Arxiv,
@@ -32,6 +33,10 @@ translate_dataset_name = {
     "xlsum": XlSum,
     "aclsum": AclSum,
     "dialogsum": DialogSum,
+    "legal": Custom,
+    "scientific": Custom,
+    "medical": Custom,
+    "news": Custom,
 }
 
 
@@ -53,6 +58,6 @@ def load_dataset(
         preview=preview,
         samples=samples,
         min_input_size=min_input_size,
-        # load_csv=load_csv,
-        # data_files=data_files,
+        load_csv=load_csv,
+        data_files=data_files,
     )
