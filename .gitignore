@@ -3,3 +3,4 @@ logs
 da-pred
 venv/
 */__pycache__
+tests
