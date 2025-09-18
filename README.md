@@ -12,6 +12,9 @@ pip install -r requirements.txt
 ```
 
 ### usage notes
-- Create a .env file with  ```OPENAI_API_KEY=""```
+
+- Create a .env file with
+```
+OPENAI_API_KEY=""
 ```
 
