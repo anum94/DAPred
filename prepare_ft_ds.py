@@ -1,7 +1,7 @@
 from ds.supported import load_dataset
 from datasets.dataset_dict import DatasetDict
 from huggingface_hub import login
-login ("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")
+
 hf_repo_name = {
     "wispermed": "anumafzal94/wispermed_full_finetuning",
     #"bigpatent": "anumafzal94/bigpatent_10k_finetuning",
