@@ -6,7 +6,7 @@ import nltk
 import numpy
 from tqdm import tqdm
 
-#nltk.download("wordnet")
+# nltk.download("wordnet")
 import logging
 import random
 from datetime import datetime
@@ -38,12 +38,15 @@ def get_task_spec_metrics(domain: str, task: str, task_spec_metrics):
 
 
 def get_domain_specific_metrics(domain: str, num_samples=100):
-    d = get_domain(domain=domain, split="test",num_samples=num_samples )
+    d = get_domain(domain=domain, split="test", num_samples=num_samples)
     return {"learning_difficult": d.compute_learning_difficulty()}
+
 
 def get_ttl_hash(seconds=86400):
     """Return the same value withing `seconds` time period"""
     return round(time.time() / seconds)
+
+
 @lru_cache(maxsize=128)
 def get_domain(domain, split, num_samples=5, ttl_hash=None):
     dataset = load_dataset(
@@ -71,12 +74,22 @@ def get_domain_similarity_metrics(source: str, target: str, da: str, num_samples
         target_split = "test"
 
     # start = time.time()
-    S = get_domain(domain=source, split=source_split, num_samples=num_samples, ttl_hash=get_ttl_hash())
+    S = get_domain(
+        domain=source,
+        split=source_split,
+        num_samples=num_samples,
+        ttl_hash=get_ttl_hash(),
+    )
     # end = time.time()
     # print(f"{source} domain computation took {end - start}")
 
     # start = time.time()
-    T = get_domain(domain=target, split=target_split, num_samples=num_samples, ttl_hash=get_ttl_hash())
+    T = get_domain(
+        domain=target,
+        split=target_split,
+        num_samples=num_samples,
+        ttl_hash=get_ttl_hash(),
+    )
     # end = time.time()
     # print(f"{source} domain computation took {end - start}")
 
@@ -98,15 +111,10 @@ def weighted_average(nums, weights):
 
 
 def get_features(
-    da: str, source: str, target: str, task: str, task_scores, num_samples, ft = False
+    da: str, source: str, target: str, task: str, task_scores, num_samples, ft=False
 ) -> (List, List):
     features = []
-    feature_names = [
-        "da-type",
-        "source",
-        "target",
-        "ft"
-    ]
+    feature_names = ["da-type", "source", "target", "ft"]
     features.append(da)
     features.append(source)
     features.append(target)
@@ -149,7 +157,9 @@ def get_features(
                 target_model = "anumafzal94-llama3.1"
 
         source_task_scores = task_scores.loc[
-            (task_scores["ds"] == source) & (task_scores["split"] == source_split) & (task_scores["model"] == source_model)
+            (task_scores["ds"] == source)
+            & (task_scores["split"] == source_split)
+            & (task_scores["model"] == source_model)
         ]
     except:
         # todo: add a dummy variable for this
@@ -160,17 +170,24 @@ def get_features(
     task_specific_feature = get_task_spec_metrics(source, task, source_task_scores)
     features += list(task_specific_feature.values())
     feature_names += [f"source_{key}" for key in list(task_specific_feature.keys())]
-    feature_weight = [1 / len(task_specific_feature.values())] * len(task_specific_feature.values())  # equal weight to all features
+    feature_weight = [1 / len(task_specific_feature.values())] * len(
+        task_specific_feature.values()
+    )  # equal weight to all features
     weighted_y_source = weighted_average(
         list(task_specific_feature.values()), feature_weight
     )
 
     target_task_scores = task_scores.loc[
-        (task_scores["ds"] == target) & (task_scores["split"] == target_split) & (task_scores["model"] == target_model)]
+        (task_scores["ds"] == target)
+        & (task_scores["split"] == target_split)
+        & (task_scores["model"] == target_model)
+    ]
     task_specific_feature = get_task_spec_metrics(target, task, target_task_scores)
     features += list(task_specific_feature.values())
     feature_names += [f"target_{key}" for key in list(task_specific_feature.keys())]
-    feature_weight = [1 / len(task_specific_feature.values())] * len(task_specific_feature.values())  # equal weight to all features
+    feature_weight = [1 / len(task_specific_feature.values())] * len(
+        task_specific_feature.values()
+    )  # equal weight to all features
     weighted_y_target = weighted_average(
         list(task_specific_feature.values()), feature_weight
     )
@@ -183,15 +200,16 @@ def get_features(
     return features, feature_names
 
 
-def get_template(task_scores: pd.DataFrame, num_domains=None, num_samples=10, ft = False) -> pd.DataFrame:
-
+def get_template(
+    task_scores: pd.DataFrame, num_domains=None, num_samples=10, ft=False
+) -> pd.DataFrame:
 
     domains = list(set(task_scores["ds"]))
-    #domains = ['arxiv', 'gigaword', 'wispermed', 'govreport']
+    # domains = ['arxiv', 'gigaword', 'wispermed', 'govreport']
     if num_domains is not None:
         if len(domains) > num_domains:
             domains = domains[:num_domains]
-    #task_scores = task_scores.drop(columns=task_scores.columns[:19])
+    # task_scores = task_scores.drop(columns=task_scores.columns[:19])
     da_type = ["in-domain-adapt", "single-domain-adapt", "no-domain-adapt"]
     task = "summarization"
     feature_names = ["dummy_feature_name"] * (len(task_scores.columns) - 1)
@@ -215,7 +233,7 @@ def get_template(task_scores: pd.DataFrame, num_domains=None, num_samples=10, ft
                 domains_copy.remove(source)
                 for target in domains_copy:
                     features, feature_names = get_features(
-                        da, source, target, task, task_scores, num_samples, ft = ft
+                        da, source, target, task, task_scores, num_samples, ft=ft
                     )
                     if df.columns.empty:
                         df = pd.DataFrame(columns=feature_names)
@@ -246,20 +264,18 @@ def construct_training_corpus(
     assert da_type in ["in-domain-adapt", "single-domain-adapt"]
 
     df = pd.read_excel(template_path, header=0)
-    df_zero_shot = df.loc[df['model'] == 'meta-llama-Meta-Llama-3.1-8B-Instruct-Turbo']
-    df_ft = df.loc[(df['split'] == 'test') & (df['ds'] != 'aclsum')]
+    df_zero_shot = df.loc[df["model"] == "meta-llama-Meta-Llama-3.1-8B-Instruct-Turbo"]
+    df_ft = df.loc[(df["split"] == "test") & (df["ds"] != "aclsum")]
 
-
-    #template_2 = get_template(df_ft, num_domains=num_domains, num_samples=num_samples, ft = True
+    # template_2 = get_template(df_ft, num_domains=num_domains, num_samples=num_samples, ft = True
     #                          )
-    #template_2.to_excel("template2_ft.xlsx")
+    # template_2.to_excel("template2_ft.xlsx")
     template_2 = pd.read_excel("template2_ft.xlsx")
-    #template_1 = get_template(df_zero_shot, num_domains=num_domains, num_samples=num_samples
-    #)
-    #template_1.to_excel("template1.xlsx")
+    # template_1 = get_template(df_zero_shot, num_domains=num_domains, num_samples=num_samples
+    # )
+    # template_1.to_excel("template1.xlsx")
     template_1 = pd.read_excel("template1.xlsx")
 
-
     # print (template)
-    template = pd.concat([template_1, template_2], axis = 0)
+    template = pd.concat([template_1, template_2], axis=0)
     return template

@@ -1,4 +1,3 @@
-
 from rank_bm25 import BM25Okapi
 import numpy as np
 from features import Domain
@@ -7,6 +6,7 @@ from sklearn.metrics.pairwise import cosine_similarity
 import sys
 from scipy.spatial.distance import jensenshannon
 from functools import lru_cache
+
 
 class Similarity:
     """
@@ -32,7 +32,9 @@ class Similarity:
         self.target = target
         self.client = client
         self.contextual_overlap = self.compute_contextual_similarity()
-        self.s_updated_prob_dist, self.t_updated_prob_dist = self.get_global_prob_distribution()
+        self.s_updated_prob_dist, self.t_updated_prob_dist = (
+            self.get_global_prob_distribution()
+        )
         self.kl_divergence = self.compute_kl_divergence()
         self.js_divergence = self.compute_js_divergence()
         self.vocab_overlap = self.compute_vocab_overlap()
@@ -64,10 +66,11 @@ class Similarity:
             self.contextual_overlap,
         ]
 
-    def compute_vocab_overlap(self,) -> float:
+    def compute_vocab_overlap(
+        self,
+    ) -> float:
         vocab1 = set(self.source.domain_words)
         vocab2 = set(self.target.domain_words)
-
 
         # Calculate precision
         overlap = len(vocab1.intersection(vocab2))
@@ -98,7 +101,6 @@ class Similarity:
 
         return overlap_percentage
 
-
     def compute_contextual_similarity(self) -> float:
         """
         Computes sentence overlap of source and target domains using OpenAI Embeddings and cosine similarity.
@@ -108,9 +110,13 @@ class Similarity:
 
         if self.target.dataset_size > self.source.dataset_size:
             source_embedding = np.array(self.source.sentence_embeddings)
-            target_embedding = np.array(self.target.sentence_embeddings)[:self.source.dataset_size]
+            target_embedding = np.array(self.target.sentence_embeddings)[
+                : self.source.dataset_size
+            ]
         elif self.target.dataset_size < self.source.dataset_size:
-            source_embedding = np.array(self.source.sentence_embeddings)[:self.target.dataset_size]
+            source_embedding = np.array(self.source.sentence_embeddings)[
+                : self.target.dataset_size
+            ]
             target_embedding = np.array(self.target.sentence_embeddings)
         else:
             source_embedding = np.array(self.source.sentence_embeddings)
@@ -123,7 +129,6 @@ class Similarity:
         scores = cosine_similarity(source_embedding, target_embedding)
         scores = np.mean(scores)
         return scores
-
 
     def get_global_prob_distribution(self):
         s_prob_dist_words = list(self.source.prob_dist.keys())
@@ -140,9 +145,15 @@ class Similarity:
             if s_word not in t_updated_prob_dist:
                 t_updated_prob_dist[s_word] = sys.float_info.epsilon
 
-        s_updated_prob_dist = {k: v for k, v in sorted(s_updated_prob_dist.items(), key=lambda item: item[0])}
-        t_updated_prob_dist = {k: v for k, v in sorted(t_updated_prob_dist.items(), key=lambda item: item[0])}
-        return  s_updated_prob_dist, t_updated_prob_dist
+        s_updated_prob_dist = {
+            k: v
+            for k, v in sorted(s_updated_prob_dist.items(), key=lambda item: item[0])
+        }
+        t_updated_prob_dist = {
+            k: v
+            for k, v in sorted(t_updated_prob_dist.items(), key=lambda item: item[0])
+        }
+        return s_updated_prob_dist, t_updated_prob_dist
 
     def compute_kl_divergence(self) -> float:
 
@@ -159,5 +170,3 @@ class Similarity:
         js_div = jensenshannon(s_pd, t_pd)
         js_div = numpy.sum(js_div)
         return js_div
-
-
